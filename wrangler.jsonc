@@ -1,0 +1,76 @@
+/**
+ * Wrangler configuration for the link-in-bio site.
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ *
+ * Before deploying, replace every value marked REPLACE_ME (see README.md → Deployment).
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "my-links",
+	"main": "worker/index.ts",
+	"compatibility_date": "2026-11-18",
+
+	/**
+	 * Static assets (the built React app). The Worker runs first for every request so it can
+	 * route by hostname, enforce Cloudflare Access on the admin host, inject profile data
+	 * into the public page and add security headers. Assets are served via env.ASSETS.
+	 */
+	"assets": {
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": true
+	},
+
+	/**
+	 * Serve only on the configured custom domains. The workers.dev URL and preview URLs are
+	 * disabled so the admin app cannot be reached on a hostname that Access does not protect
+	 * (the Worker also refuses admin traffic on any hostname other than ADMIN_HOSTNAME).
+	 */
+	"workers_dev": false,
+	"preview_urls": false,
+	"routes": [
+		{ "pattern": "links.flicksbymiao.com", "custom_domain": true },
+		{ "pattern": "admin.flicksbymiao.com", "custom_domain": true }
+	],
+
+	"vars": {
+		/** Public profile hostname. */
+		"PUBLIC_HOSTNAME": "links.flicksbymiao.com",
+		/** Private dashboard hostname. Must be protected by a Cloudflare Access application. */
+		"ADMIN_HOSTNAME": "admin.flicksbymiao.com",
+		/** Your Zero Trust team domain, e.g. "myteam.cloudflareaccess.com". */
+		"ACCESS_TEAM_DOMAIN": "throbbing-tree-63ad.cloudflareaccess.com",
+		/** The Application Audience (AUD) tag of the Access application for ADMIN_HOSTNAME. */
+		"ACCESS_AUD": "999e31529282ed2f81bdc3c874e26f759e03c33e882654b91a7bd2689f5f85c0",
+		/**
+		 * Optional comma-separated allowlist of emails, checked in addition to the Access policy
+		 * (defence in depth). Leave empty to rely on the Access policy alone.
+		 */
+		"ADMIN_EMAILS": ""
+	},
+
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "my-links-db",
+			"database_id": "67276e88-85db-46a5-baa5-fe9fbc624b8b",
+			"migrations_dir": "migrations"
+		}
+	],
+
+	/**
+	 * Profile/background images. Accessed only from the Worker through this binding; no R2
+	 * credentials or public bucket URL exist anywhere. Images are served via /media/<key>.
+	 */
+	"r2_buckets": [
+		{
+			"binding": "IMAGES",
+			"bucket_name": "my-links-assets"
+		}
+	],
+
+	"observability": {
+		"enabled": true
+	},
+	"upload_source_maps": true
+}

@@ -1,0 +1,4 @@
+# Local development only — never deployed. Copy to .dev.vars.
+# Lets you use the dashboard at http://localhost:5173/admin without Cloudflare Access.
+# Only honoured when the request hostname is localhost.
+DEV_AUTH_BYPASS="true"
