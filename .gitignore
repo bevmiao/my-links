@@ -29,3 +29,6 @@ dist-ssr
 !.dev.vars.example
 .env*
 !.env.example
+
+# Python bytecode (from the UI/UX Pro Max skill scripts)
+__pycache__/
