@@ -1,7 +1,7 @@
 import { ArrowRight, ArrowUpRight, ChevronDown, Mail, MapPin } from 'lucide-react'
 import { useReducedMotion } from 'motion/react'
 import * as m from 'motion/react-m'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { SECTION_LABELS } from '../../shared/homepage'
 import type { HomepageContact, HomepageStory, PublicSection } from '../../shared/types'
 import { tapSquish, tapSquishSoft } from '../lib/motion'
@@ -122,13 +122,15 @@ function Section({ section, preview, grain }: { section: PublicSection; preview?
  */
 function StoryBlock({ story }: { story: HomepageStory }) {
   // `smooth` is true only for changes the visitor made (the button). Measuring and resizing
-  // change the height instantly, so nothing animates on page load.
-  const [state, setState] = useState({ open: false, fits: true, smooth: false })
+  // change the height instantly, so nothing animates on page load. It starts collapsed (the
+  // usual case for a real story) and is measured before the first paint, so a long story never
+  // flashes at full length.
+  const [state, setState] = useState({ open: false, fits: false, smooth: false })
   const { open, fits, smooth } = state
   const reduce = useReducedMotion()
   const ref = useRef<HTMLParagraphElement>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
     const measure = () => {
@@ -138,10 +140,12 @@ function StoryBlock({ story }: { story: HomepageStory }) {
       const next = hidden <= parseFloat(cs.lineHeight)
       setState((s) => (s.fits === next ? s : { ...s, fits: next, smooth: false }))
     }
+    measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [story.body])
+    // `fits` is a dependency because the paragraph is remounted when it changes (see `key`).
+  }, [story.body, fits])
 
   const collapsed = !fits && !open
   return (
@@ -151,6 +155,9 @@ function StoryBlock({ story }: { story: HomepageStory }) {
       </h2>
       <div className="relative">
         <m.p
+          // Remount when the measured fit changes, so the new height is written straight into the
+          // DOM on render (initial={false}) instead of on a later animation frame.
+          key={fits ? 'fits' : 'cut'}
           ref={ref}
           id="story-body"
           initial={false}

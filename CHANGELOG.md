@@ -10,6 +10,7 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 - Tap feedback that also works on phones (including iPhone): link cards, social icons, skill chips, the Work contact rows, and Read more press in and spring back.
 - My story: Read more opens to the story's real height with a soft spring while the bottom fade dissolves, and closes right away instead of after a delay. The button only appears when the story is actually cut off at the current screen width; otherwise the whole story shows.
 - Uses the `motion` package (small LazyMotion + `m` setup). Reduced-motion visitors still get no movement; the pop-up just fades. Public page JavaScript is about 35 kB larger (gzip).
+- Fixed: on computers, opening About briefly showed the whole story before it collapsed to Read more. The story is now measured before it is drawn.
 - Dev deploy: motion polish to `my-links-dev` (version `62e9895c`, no migration). Checked in the browser on the real CSP: no violations or console errors.
 - **Production:** fast-forwarded `main` to `dev` (`9536633`) and deployed `my-links` (version `7089786e`, previous `4786094f`, no migration). Verified: public pages 200, admin path 404 on the public host, admin host redirects to Access, photo served, CSP and HSTS present, no console errors.
 
