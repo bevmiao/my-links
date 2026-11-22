@@ -11,30 +11,51 @@ export function safeJsonForHtml(data: unknown): string {
     .replace(new RegExp(String.fromCharCode(0x2029), 'g'), '\\u2029')
 }
 
+/** Short line for link previews: the published line under the name, else the bio. */
+export function shareTagline(data: PublicPageData): string {
+  const intro = data.homepage?.sections.find((s) => s.key === 'intro')
+  const headline = intro?.key === 'intro' ? intro.intro.headline.trim() : ''
+  const text = (headline || data.profile.bio.trim() || `Links from ${data.profile.displayName}`).replace(/\s+/g, ' ')
+  return text.length > 200 ? `${text.slice(0, 199).trimEnd()}…` : text
+}
+
 /**
  * Server-side enhancement of the public page: embeds the profile data (instant first paint,
- * no loading spinner) and fills in title / description / Open Graph tags for link previews.
+ * no loading spinner) and fills in the title, description, Open Graph and Twitter card tags used
+ * by link previews (texts, Instagram, Slack, …).
+ *
+ * `siteOrigin` is the public site's own origin (https://PUBLIC_HOSTNAME, or the local dev server),
+ * never the host a request happened to arrive on, so preview images and URLs are always absolute
+ * and correct. Everything comes from `data`, which public routes build from the profile and the
+ * PUBLISHED homepage only (drafts are never read there).
  * The data block is non-executable (type="application/json"), so the CSP stays strict.
  */
-export function injectProfile(res: Response, data: PublicPageData, origin: string, page: PageKey = 'home'): Response {
+export function injectProfile(res: Response, data: PublicPageData, siteOrigin: string, page: PageKey = 'home'): Response {
   const { profile } = data
   const base = `${profile.displayName} (@${profile.username})`
   const title = page === 'home' ? base : `${PAGE_LABELS[page]} · ${base}`
-  const pageUrl = `${origin}${PAGE_PATHS[page]}`
-  const description = profile.bio || `Links from ${profile.displayName}`
-  const image = profile.avatarUrl ? new URL(profile.avatarUrl, origin).toString() : null
+  const shareTitle = page === 'home' ? profile.displayName : `${PAGE_LABELS[page]} · ${profile.displayName}`
+  const pageUrl = `${siteOrigin}${PAGE_PATHS[page]}`
+  const tagline = shareTagline(data)
+  const image = profile.avatarUrl ? new URL(profile.avatarUrl, siteOrigin).toString() : null
+  const imageAlt = `Photo of ${profile.displayName}`
 
   const meta = (attr: 'name' | 'property', key: string, value: string) =>
     `<meta ${attr}="${key}" content="${escapeAttr(value)}" />`
 
   const extraHead = [
-    meta('name', 'description', description),
+    meta('name', 'description', tagline),
     meta('property', 'og:type', 'profile'),
-    meta('property', 'og:title', title),
-    meta('property', 'og:description', description),
+    meta('property', 'og:site_name', profile.displayName),
+    meta('property', 'og:title', shareTitle),
+    meta('property', 'og:description', tagline),
     meta('property', 'og:url', pageUrl),
-    image ? meta('property', 'og:image', image) : '',
+    meta('property', 'profile:username', profile.username),
+    ...(image ? [meta('property', 'og:image', image), meta('property', 'og:image:alt', imageAlt)] : []),
     meta('name', 'twitter:card', 'summary'),
+    meta('name', 'twitter:title', shareTitle),
+    meta('name', 'twitter:description', tagline),
+    ...(image ? [meta('name', 'twitter:image', image), meta('name', 'twitter:image:alt', imageAlt)] : []),
     `<link rel="canonical" href="${escapeAttr(pageUrl)}" />`,
   ].join('')
 

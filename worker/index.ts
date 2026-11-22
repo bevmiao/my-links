@@ -61,7 +61,9 @@ async function servePublic(request: Request, env: Env, ctx: ExecutionContext, lo
     ])
     const type = asset.headers.get('Content-Type') ?? ''
     if (asset.ok && type.includes('text/html')) {
-      const html = injectProfile(asset, data, url.origin, page)
+      // Link previews must point at the real public site, whichever host served this request.
+      const siteOrigin = local ? url.origin : `https://${env.PUBLIC_HOSTNAME}`
+      const html = injectProfile(asset, data, siteOrigin, page)
       const out = new Response(html.body, html)
       out.headers.set('Cache-Control', 'public, max-age=0, must-revalidate')
       out.headers.delete('ETag') // content now varies with the profile

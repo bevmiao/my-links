@@ -198,6 +198,7 @@ The tests run inside `workerd` through `@cloudflare/vitest-plugin`, using the re
 - **Profile and links:** CRUD, validation, ordering, categories, and only active links appearing publicly.
 - **Homepage draft/publish:** placeholder drafts never public, per-section server validation, drafts staying private until publish, hidden sections removed from public data, reset to live, and published tables matching the draft exactly.
 - **HTML injection:** escaping of embedded data and meta tags, and the CSP.
+- **Share previews:** Open Graph and Twitter tags filled from the profile and the published homepage only, absolute URLs on `PUBLIC_HOSTNAME` whatever the request host, drafts and hidden sections never used, long taglines escaped and shortened.
 - **Analytics:** recording, bot filtering, the no-open-redirect rule, and the summary maths.
 - **R2:** upload, serving, cleanup of replaced images, and rejecting disguised, oversized or unknown files.
 - **Client strip:** placeholder clients in the draft only, logo uploads (GIF and SVG refused, 1 MB limit), name and key validation including keys that were never uploaded, publish/hide, no storage keys in public data, and cleanup of unused logos.
