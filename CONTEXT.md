@@ -59,7 +59,7 @@ Directories:
 
 **Draft and publish.** Every `homepage_*` table stores a `'draft'` and a `'published'` copy, distinguished by the `state` column. The admin editor writes drafts. Publishing copies every draft table over its published copy in one D1 batch (`worker/lib/homepage.ts`). Public routes read only published rows, and `toPublicHomepage()` (`shared/homepage.ts`) removes hidden sections and the placeholder portfolio URL before anything leaves the Worker. Testimonials have no table yet: the section is a placeholder slot.
 
-Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds the homepage tables and placeholder **drafts only**, so applying it publishes nothing), and `0003_add_link_categories.sql` (adds `links.category`). Applied locally. Not yet applied to `my-links-db-dev` or production. Future changes go in `0004_*.sql` and up.
+Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds the homepage tables and placeholder **drafts only**, so applying it publishes nothing), and `0003_add_link_categories.sql` (adds `links.category`). Applied locally and to `my-links-db-dev` (2026-11-21). **Not applied to production** (`my-links-db`). Apply them there before any production deploy of this code, or the public page will fail to load. Future changes go in `0004_*.sql` and up.
 
 ## 5. API architecture
 
