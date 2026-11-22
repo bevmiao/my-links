@@ -45,7 +45,7 @@ Resources (already created):
 
 | Resource | Name | ID or notes |
 |---|---|---|
-| D1 | `my-links-db-dev` | `980aacda-351e-4828-b370-d9b084b50734`. Migrations 0001–0004 applied (tracked in `d1_migrations`). |
+| D1 | `my-links-db-dev` | `980aacda-351e-4828-b370-d9b084b50734`. Migrations 0001–0005 applied (tracked in `d1_migrations`). |
 | R2 | `my-links-assets-dev` | Standard storage, ENAM region. |
 | Worker | `my-links-dev` | Deployed. |
 | Hostnames | `dev.links.flicksbymiao.com`, `dev.admin.flicksbymiao.com` | Custom domains, attached on deploy. |
