@@ -4,6 +4,9 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Released to production (2026-11-22)
+- **Production: pass 4 is live.** Took a read-only export of `my-links-db` (`backups/before-pass-4-2026-11-22/`, local only), confirmed the database ID (`67276e88…`), applied migrations 0008–0010 (production now has five placeholder clients in the draft only; nothing published), fast-forwarded `main` to `dev` (`664b973`), and deployed `my-links` (version `9405ebbd`, previous `aa717845`). Verified: Home, About and Work 200, admin path 404 on the public host, admin host redirects to Access, placeholder logos served, CSP and HSTS present, share tags on `https://links.flicksbymiao.com` with your photo and tagline, the share pop-up and QR code work, no CSP violations or console errors. The "Worked with" strip stays hidden on the live site until you add your clients and publish it.
+
 ### Changed (client cards in dark mode)
 - The pop-up card that opens from a "Worked with" logo uses your light-mode look in dark mode too: light card, dark text. Nothing else changes in dark mode.
 - Undone: a dev-only change that had made the link cards on Home white in dark mode (dev version `e1bed349`). That was the wrong element; the link cards are back to how they were.

@@ -93,6 +93,8 @@ Never run these with `--env` omitted when you mean dev. Omitting `--env` targets
 
 Part One went live on 2026-11-22 (Worker version `4786094f`, migrations 0001–0007). A copy of the live site from before Part One exists: git tag `live-before-part-one` and `backups/live-before-part-one-2026-11-22/` (local only, see its README for how to look at it or roll back).
 
+Pass 4 (client strip with pop-up cards, share previews, QR code, motion polish) went live on 2026-11-22: Worker version `9405ebbd`, migrations 0008–0010 applied first. A read-only export of `my-links-db` taken just before is in `backups/before-pass-4-2026-11-22/` (local only, git-ignored).
+
 Production deploys are not part of routine development. Only after explicit approval:
 
 ```bash
