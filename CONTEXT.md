@@ -79,7 +79,8 @@ Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds th
 
 - R2 bucket `my-links-assets` (production) and `my-links-assets-dev` (development). Bound as `IMAGES`. There are no R2 credentials and no public bucket URL. Objects are served only through the Worker.
 - Keys: `avatar/<uuid>.<ext>`, `background/<uuid>.<ext>`.
-- Limits: avatar ≤ 2 MB, background ≤ 5 MB. Allowed types are PNG, JPEG, WebP, and GIF, detected by magic bytes. SVG is refused.
+- Uploads are resized in the browser first (`src/lib/shrinkImage.ts`: 800 px avatar, 2400 px background, WebP), so any size photo works and visitors get small files.
+- Limits (checked again on the server, after resizing): avatar ≤ 2 MB, background ≤ 5 MB. Allowed types are PNG, JPEG, WebP, and GIF, detected by magic bytes. SVG is refused.
 
 ## 7. Existing functionality (must be preserved)
 

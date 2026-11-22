@@ -3,6 +3,7 @@ import { useRef, useState, type DragEvent } from 'react'
 import type { Profile } from '../../shared/types'
 import { ALLOWED_IMAGE_TYPES, IMAGE_RULES, type ImageKind } from '../../shared/validation'
 import { adminApi } from '../lib/api'
+import { MAX_INPUT_BYTES, SHRINK_MAX_SIDE, shrinkImage } from '../lib/shrinkImage'
 import { Button, cx, useToast } from './ui'
 
 interface ImageUploaderProps {
@@ -12,9 +13,12 @@ interface ImageUploaderProps {
   shape?: 'circle' | 'wide'
 }
 
+const isAllowed = (type: string) => (ALLOWED_IMAGE_TYPES as readonly string[]).includes(type)
+
 /**
- * Uploads straight to R2 through the Worker. The client checks type/size for fast feedback;
- * the Worker re-validates (size + magic-byte sniffing) before storing anything.
+ * Shrinks the photo in the browser (src/lib/shrinkImage.ts), then uploads it to R2 through the
+ * Worker. The client checks type/size for fast feedback; the Worker re-validates (size +
+ * magic-byte sniffing) before storing anything.
  */
 export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }: ImageUploaderProps) {
   const toast = useToast()
@@ -23,17 +27,27 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
   const [dragging, setDragging] = useState(false)
   const rules = IMAGE_RULES[kind]
 
-  async function upload(file: File) {
-    if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-      toast('Use a PNG, JPEG, WebP or GIF image.', 'error')
+  async function upload(original: File) {
+    // Any image the browser can open is fine here (e.g. HEIC on iPhone); it's converted below.
+    if (!original.type.startsWith('image/') || original.type === 'image/svg+xml') {
+      toast('Use a photo: JPEG, PNG, WebP, HEIC or GIF.', 'error')
       return
     }
-    if (file.size > rules.maxBytes) {
-      toast(`That image is larger than ${rules.label}.`, 'error')
+    if (original.size > MAX_INPUT_BYTES) {
+      toast('That file is too big to process. Try one under 40 MB.', 'error')
       return
     }
     setBusy(true)
     try {
+      const file = await shrinkImage(original, SHRINK_MAX_SIDE[kind], rules.maxBytes)
+      if (!isAllowed(file.type)) {
+        toast('This browser couldn’t convert that photo. Try a JPEG or PNG.', 'error')
+        return
+      }
+      if (file.size > rules.maxBytes) {
+        toast(file.type === 'image/gif' ? `GIFs aren’t resized, so they need to be under ${rules.label}.` : `That image is still larger than ${rules.label}.`, 'error')
+        return
+      }
       onUpdated(await adminApi.uploadImage(kind, file))
       toast(kind === 'avatar' ? 'Profile photo updated' : 'Background updated')
     } catch (e) {
@@ -87,7 +101,7 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{currentUrl ? 'Replace image' : 'Upload an image'}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">Drag & drop or browse · PNG, JPEG, WebP or GIF · up to {rules.label}</p>
+        <p className="mt-0.5 text-xs text-zinc-500">Drag & drop or browse. Any size photo works; it’s resized automatically so your page loads fast.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" icon={<UploadCloud size={14} />} loading={busy} onClick={() => inputRef.current?.click()}>
             Choose file
@@ -101,7 +115,7 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
         <input
           ref={inputRef}
           type="file"
-          accept={ALLOWED_IMAGE_TYPES.join(',')}
+          accept="image/*"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0]

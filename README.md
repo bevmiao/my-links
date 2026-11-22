@@ -108,7 +108,8 @@ Deleting a link keeps its past clicks in your all-time totals (`ON DELETE SET NU
 
 ## Image storage (R2)
 
-- Profile photos (≤ 2 MB) and background images (≤ 5 MB) are uploaded through `POST /api/admin/images/{avatar|background}` and stored as `avatar/<uuid>.<ext>` / `background/<uuid>.<ext>`.
+- **Automatic resizing in the browser:** the dashboard accepts any size photo (including iPhone HEIC where the browser can open it) and shrinks it before upload (`src/lib/shrinkImage.ts`): longest side 800 px for profile photos and 2400 px for backgrounds, re-encoded as WebP (JPEG fallback). A 15 MB camera photo becomes a sharp file of a few hundred KB or less. GIFs are not resized, so animation is kept. No dependency.
+- Profile photos (≤ 2 MB after resizing) and background images (≤ 5 MB after resizing) are uploaded through `POST /api/admin/images/{avatar|background}` and stored as `avatar/<uuid>.<ext>` / `background/<uuid>.<ext>`.
 - **Validation happens on the server:** the request size is checked before the body is read, and the real type is detected from the file's magic bytes, so the browser's declared type is ignored. Only PNG, JPEG, WebP and GIF are accepted. SVG is refused because it can contain script.
 - Replacing or removing an image deletes the old object.
 - Objects live in the `my-links-assets` bucket, bound to the Worker as `IMAGES` (see `wrangler.jsonc`). The frontend never talks to R2 directly.

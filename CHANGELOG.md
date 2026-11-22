@@ -5,6 +5,7 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 ## [Unreleased] — Part One (development)
 
 ### Added (pass 3b)
+- Any size photo can be uploaded: the dashboard resizes profile photos (800 px) and backgrounds (2400 px) in the browser and saves them as WebP before upload. Pages load faster, and the 2 MB / 5 MB server limits stay as a safety net. GIFs are not resized.
 - Film grain setting in Appearance (migration `0006`): Moving (default, the current look), Still (texture without flicker), or Off. The story pop-up follows the same setting.
 
 ### Changed (pass 3: professional and cozy)
