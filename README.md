@@ -78,7 +78,9 @@ npm run dev                       # http://localhost:5173
 | `npm run typecheck` / `npm run lint` | Static checks |
 | `npm run db:migrate:local` / `:remote` | Apply D1 migrations |
 | `npm run db:seed:local` / `:remote` | Load the sample data (**replaces all links**) |
-| `npm run deploy` | Build and deploy to Cloudflare |
+| `npm run deploy` | Build and deploy to **production** (owner approval required) |
+| `npm run deploy:dev:check` | Build for dev and verify every target is dev-only (uploads nothing) |
+| `npm run deploy:dev` | The same checks, then deploy to the dev Worker `my-links-dev` |
 | `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` after editing `wrangler.jsonc` |
 
 ---

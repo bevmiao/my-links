@@ -5,6 +5,7 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 ## [Unreleased] — Part One (development)
 
 ### Added
+- Guarded dev deploy: `npm run deploy:dev:check` and `npm run deploy:dev` (`scripts/deploy-dev.mjs`). They build for dev and stop before uploading if the config or dry run names any production resource or hostname.
 - Development environment in `wrangler.jsonc` (`env.dev`): separate Worker (`my-links-dev`), D1 (`my-links-db-dev`), R2 (`my-links-assets-dev`), and dev hostnames.
 - Project documentation: `CONTEXT.md`, `INSTRUCTIONS.md`, `DEVELOPMENT.md`, `.env.example`, `CHANGELOG.md`.
 

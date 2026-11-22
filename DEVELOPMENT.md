@@ -55,18 +55,22 @@ Resources (already created):
 
 The build uses the Cloudflare Vite plugin. **The plugin picks the environment when you build, not when you deploy.** `npm run build` writes `dist/my_links/wrangler.json` and `.wrangler/deploy/config.json`, and `wrangler deploy` reads that generated config. The `--env` flag on `wrangler deploy` does not switch it. A plain build produces the **production** config, so `npm run build` followed by `npx wrangler deploy --env dev` would fail or deploy to production. Do not use that sequence.
 
-Deploy dev like this:
+Use the guarded scripts (they work the same in PowerShell, Git Bash, macOS, and Linux):
 
 ```bash
-# Git Bash / macOS / Linux
-CLOUDFLARE_ENV=dev npm run build
-# PowerShell instead:  $env:CLOUDFLARE_ENV="dev"; npm run build; Remove-Item Env:CLOUDFLARE_ENV
-
-npx wrangler deploy --dry-run   # check: only my-links-db-dev, my-links-assets-dev, dev.* hostnames
-npx wrangler deploy             # deploys my-links-dev (the generated config already targets dev)
+npm run deploy:dev:check   # build for dev, verify, dry run. Uploads nothing.
+npm run deploy:dev         # the same checks, then deploys my-links-dev
 ```
 
-Read the dry-run binding list before you deploy. If it shows `my-links-db`, `my-links-assets`, or `links.flicksbymiao.com`, stop and rebuild with `CLOUDFLARE_ENV=dev`.
+`scripts/deploy-dev.mjs` builds with `CLOUDFLARE_ENV=dev` and then checks three things. It stops before uploading if any check fails:
+
+1. The generated config names Worker `my-links-dev`, D1 `my-links-db-dev`, R2 `my-links-assets-dev`, and only the two `dev.` hostnames.
+2. Neither the generated config nor the dry-run output mentions `my-links-db`, `my-links-assets`, `links.flicksbymiao.com`, or `admin.flicksbymiao.com` without the `dev` prefix or suffix.
+3. After deploying, the output confirms `Uploaded my-links-dev`.
+
+Every dev deploy still needs the owner's approval first.
+
+Manual equivalent, if you ever need it: `CLOUDFLARE_ENV=dev npm run build`, then `npx wrangler deploy --dry-run` (read the binding list), then `npx wrangler deploy`. Do not use `wrangler deploy -c wrangler.jsonc`. It bypasses the Vite build and fails with "The `assets` property … is missing the required `directory` property."
 
 Check it afterwards:
 
