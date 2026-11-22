@@ -16,7 +16,7 @@ afterAll(() => restoreFetch())
 const getState = async () => (await (await adminCall(token, '/api/admin/homepage')).json()) as HomepageAdminState
 const publicData = async () => (await (await call(`${PUBLIC}/api/profile`)).json()) as PublicPageData
 const put = (section: string, json: unknown) => adminCall(token, `/api/admin/homepage/${section}`, { method: 'PUT', json })
-const ALL_KEYS = ['intro', 'skills', 'opportunities', 'contact', 'testimonials']
+const ALL_KEYS = ['intro', 'story', 'skills', 'opportunities', 'contact', 'testimonials']
 
 // Tests in this file run in order and share one isolated database.
 describe('homepage draft / publish', () => {
@@ -29,6 +29,7 @@ describe('homepage draft / publish', () => {
     expect(s.draft.intro.about).toMatch(/^I shoot photos and video/) // refreshed by migration 0004
     expect(s.draft.openTo).toBe('Always up for freelance shoots, collabs, or just a coffee. Say hi!')
     expect(s.draft.skills.length).toBeGreaterThan(0)
+    expect(s.draft.story).toMatchObject({ title: 'Where I grew up', body: expect.stringMatching(/^Placeholder/) })
     // Experience was removed; its stored section row is ignored.
     expect(s.draft.sections.map((x) => x.key)).toEqual(ALL_KEYS)
 
@@ -47,6 +48,7 @@ describe('homepage draft / publish', () => {
     expect((await put('skills', { items: [{ label: '' }] })).status).toBe(422)
     expect((await put('open-to', { sentence: 'x'.repeat(201) })).status).toBe(422)
     expect((await put('intro', { headline: 'x'.repeat(121), about: '' })).status).toBe(422)
+    expect((await put('story', { title: 't', body: 'x'.repeat(2001) })).status).toBe(422)
     expect((await put('sections', { items: [{ key: 'intro', visible: true }] })).status).toBe(422) // must list every section
     expect((await put('sections', { items: [...ALL_KEYS, 'experience'].map((key) => ({ key, visible: true })) })).status).toBe(422)
     expect((await put('experience', { items: [] })).status).toBe(404) // removed section
@@ -74,6 +76,7 @@ describe('homepage draft / publish', () => {
     })
     await put('skills', { items: [{ label: 'Photography' }, { label: 'Editing' }] })
     await put('open-to', { sentence: 'Up for coffee.' })
+    await put('story', { title: 'Where I grew up', body: 'Alhambra summers.' })
     expect((await publicData()).homepage).toBeNull() // still unpublished
 
     const pub = await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
@@ -89,7 +92,9 @@ describe('homepage draft / publish', () => {
     expect(home.sections.find((s) => s.key === 'contact')).toEqual({
       key: 'contact',
       contact: { email: 'me@example.com', location: 'Pasadena', portfolioUrl: '', portfolioComingSoon: true }, // coming-soon URL hidden
+      story: { title: 'Where I grew up', body: 'Alhambra summers.' }, // for the location pop-up
     })
+    expect(home.sections.find((s) => s.key === 'story')).toEqual({ key: 'story', story: { title: 'Where I grew up', body: 'Alhambra summers.' } })
     expect(JSON.stringify(home)).not.toContain('secret-placeholder')
     expect(home.sections.find((s) => s.key === 'skills')).toEqual({ key: 'skills', items: [{ label: 'Photography' }, { label: 'Editing' }] })
   })
@@ -111,12 +116,15 @@ describe('homepage draft / publish', () => {
   })
 
   it('omits hidden sections from the public data completely', async () => {
-    const order = ['contact', 'intro', 'skills', 'opportunities', 'testimonials']
-    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' })) })
+    const order = ['contact', 'intro', 'story', 'skills', 'opportunities', 'testimonials']
+    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' && key !== 'story' })) })
     await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
     const home = (await publicData()).homepage!
     expect(home.sections.map((s) => s.key)).toEqual(['contact', 'intro', 'opportunities', 'testimonials'])
     expect(JSON.stringify(home)).not.toContain('Photography')
+    // A hidden story must not leak through the location pop-up either.
+    expect(home.sections.find((s) => s.key === 'contact')).toMatchObject({ story: null })
+    expect(JSON.stringify(home)).not.toContain('Alhambra')
   })
 
   it('publishes atomically: every table in use matches the draft afterwards', async () => {
@@ -125,8 +133,9 @@ describe('homepage draft / publish', () => {
       'SELECT headline, about FROM homepage_intro WHERE state = ?',
       'SELECT email, location, portfolio_url, portfolio_coming_soon FROM homepage_contact WHERE state = ?',
       'SELECT sentence FROM homepage_open_to WHERE state = ?',
+      'SELECT title, body FROM homepage_story WHERE state = ?',
       'SELECT label, sort_order FROM homepage_skills WHERE state = ? ORDER BY sort_order',
-      'SELECT section_key, is_visible, sort_order FROM homepage_sections WHERE state = ? ORDER BY sort_order',
+      'SELECT section_key, is_visible, sort_order FROM homepage_section_settings WHERE state = ? ORDER BY sort_order',
     ]
     for (const q of queries) expect(await rows(q, 'published')).toEqual(await rows(q, 'draft'))
   })
@@ -135,5 +144,25 @@ describe('homepage draft / publish', () => {
     const n = async (table: string) => (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first<{ n: number }>())!.n
     expect(await n('homepage_experience')).toBeGreaterThan(0)
     expect(await n('homepage_opportunities')).toBeGreaterThan(0)
+    expect(await n('homepage_sections')).toBeGreaterThan(0)
+  })
+})
+
+describe('public pages', () => {
+  it('serves /about and /work with embedded data, per-page titles and canonical URLs', async () => {
+    for (const [path, label] of [['/about', 'About'], ['/work', 'Work']]) {
+      const res = await call(`${PUBLIC}${path}`)
+      expect(res.status).toBe(200)
+      const html = await res.text()
+      expect(html).toContain('<script type="application/json" id="initial-data">')
+      expect(html).toMatch(new RegExp(`<title>${label} · `))
+      expect(html).toContain(`<link rel="canonical" href="${PUBLIC}${path}" />`)
+      expect(res.headers.get('Content-Security-Policy')).toContain("script-src 'self'")
+    }
+    expect(await (await call(`${PUBLIC}/`)).text()).toContain(`<link rel="canonical" href="${PUBLIC}/" />`)
+  })
+
+  it('keeps admin paths off the public host', async () => {
+    expect((await call(`${PUBLIC}/admin/homepage`)).status).toBe(404)
   })
 })

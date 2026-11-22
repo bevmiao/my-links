@@ -1,6 +1,6 @@
 import { Moon, Sun } from 'lucide-react'
 import { useState } from 'react'
-import type { Link, Profile, PublicHomepage } from '../../shared/types'
+import type { Link, PageKey, Profile, PublicHomepage } from '../../shared/types'
 import { ProfileView } from '../components/ProfileView'
 import { resolveMode, type ResolvedMode } from '../lib/theme'
 import { cx } from './ui'
@@ -19,6 +19,7 @@ export function LivePreview({
   compact?: boolean
 }) {
   const [mode, setMode] = useState<ResolvedMode>(() => resolveMode(profile.themeMode))
+  const [page, setPage] = useState<PageKey>('home')
   const visible = links
     .filter((l) => l.isActive)
     .map(({ id, title, url, description, icon, category }) => ({ id, title, url, description, icon, category }))
@@ -54,7 +55,7 @@ export function LivePreview({
         )}
       >
         <div className="relative h-[min(680px,70dvh)] overflow-y-auto rounded-[1.7rem] [scrollbar-width:none]">
-          <ProfileView profile={profile} links={visible} homepage={homepage} mode={mode} preview />
+          <ProfileView profile={profile} links={visible} homepage={homepage} mode={mode} page={page} onNavigate={setPage} preview />
         </div>
       </div>
     </div>

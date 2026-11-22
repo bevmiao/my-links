@@ -1,4 +1,5 @@
-import type { PublicPageData } from '../../shared/types'
+import { PAGE_LABELS, PAGE_PATHS } from '../../shared/homepage'
+import type { PageKey, PublicPageData } from '../../shared/types'
 
 /** JSON that is safe to embed inside a <script> element. */
 export function safeJsonForHtml(data: unknown): string {
@@ -15,9 +16,11 @@ export function safeJsonForHtml(data: unknown): string {
  * no loading spinner) and fills in title / description / Open Graph tags for link previews.
  * The data block is non-executable (type="application/json"), so the CSP stays strict.
  */
-export function injectProfile(res: Response, data: PublicPageData, origin: string): Response {
+export function injectProfile(res: Response, data: PublicPageData, origin: string, page: PageKey = 'home'): Response {
   const { profile } = data
-  const title = `${profile.displayName} (@${profile.username})`
+  const base = `${profile.displayName} (@${profile.username})`
+  const title = page === 'home' ? base : `${PAGE_LABELS[page]} · ${base}`
+  const pageUrl = `${origin}${PAGE_PATHS[page]}`
   const description = profile.bio || `Links from ${profile.displayName}`
   const image = profile.avatarUrl ? new URL(profile.avatarUrl, origin).toString() : null
 
@@ -29,10 +32,10 @@ export function injectProfile(res: Response, data: PublicPageData, origin: strin
     meta('property', 'og:type', 'profile'),
     meta('property', 'og:title', title),
     meta('property', 'og:description', description),
-    meta('property', 'og:url', `${origin}/`),
+    meta('property', 'og:url', pageUrl),
     image ? meta('property', 'og:image', image) : '',
     meta('name', 'twitter:card', 'summary'),
-    `<link rel="canonical" href="${escapeAttr(origin)}/" />`,
+    `<link rel="canonical" href="${escapeAttr(pageUrl)}" />`,
   ].join('')
 
   return new HTMLRewriter()

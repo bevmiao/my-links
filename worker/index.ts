@@ -9,6 +9,7 @@
  * Any other hostname is treated as public, and admin paths there return 404.
  */
 import { authenticateAdmin } from './lib/access'
+import { pageForPath } from '../shared/homepage'
 import { errorResponse, HttpError, isLocalHostname, withSecurityHeaders } from './lib/http'
 import { injectProfile } from './lib/html'
 import { handleAdminApi } from './routes/admin'
@@ -52,15 +53,16 @@ async function servePublic(request: Request, env: Env, ctx: ExecutionContext, lo
   if (routed) return url.pathname.startsWith('/media/') ? routed : secure(routed)
   if (url.pathname.startsWith('/api/')) return secure(errorResponse(404, 'Not found'))
 
-  if ((request.method === 'GET' || request.method === 'HEAD') && (url.pathname === '/' || url.pathname === '/index.html')) {
+  const page = pageForPath(url.pathname)
+  if ((request.method === 'GET' || request.method === 'HEAD') && page) {
     const [asset, data] = await Promise.all([
       env.ASSETS.fetch(new Request(new URL('/', url), { headers: request.headers })),
       getPublicPageData(env),
     ])
     const type = asset.headers.get('Content-Type') ?? ''
     if (asset.ok && type.includes('text/html')) {
-      const page = injectProfile(asset, data, url.origin)
-      const out = new Response(page.body, page)
+      const html = injectProfile(asset, data, url.origin, page)
+      const out = new Response(html.body, html)
       out.headers.set('Cache-Control', 'public, max-age=0, must-revalidate')
       out.headers.delete('ETag') // content now varies with the profile
       out.headers.delete('Content-Length')

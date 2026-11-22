@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { pageForPath } from '../shared/homepage'
 import { usePathname } from './lib/router'
 import PublicProfile, { Message } from './pages/PublicProfile'
 
@@ -16,6 +17,7 @@ export default function App() {
       </Suspense>
     )
   }
-  if (path === '/' || path === '/index.html') return <PublicProfile />
+  const page = pageForPath(path)
+  if (page) return <PublicProfile page={page} />
   return <Message title="Page not found" body="There’s nothing here." />
 }

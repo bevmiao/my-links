@@ -25,11 +25,16 @@ export function LinkCard({ link, buttonStyle, preview, index = 0 }: LinkCardProp
       href={preview ? link.url : `/go/${link.id}`}
       target={preview ? '_blank' : undefined}
       rel="noopener noreferrer"
-      className={`group relative flex w-full animate-fade-up items-center gap-3.5 border border-(--p-border) bg-(--p-card) shadow-(--p-shadow) backdrop-blur-md transition duration-300 ease-out hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--p-accent)_45%,transparent)] hover:bg-(--p-card-hover) hover:shadow-[0_10px_30px_-12px_color-mix(in_srgb,var(--p-accent)_45%,transparent)] active:translate-y-0 active:scale-[0.99] ${RADIUS[buttonStyle]} ${pill ? 'px-4 py-3' : 'p-3.5'}`}
+      className={`group relative flex w-full animate-fade-up items-center gap-3.5 overflow-hidden border border-(--p-border) bg-(--p-card) shadow-(--p-shadow) backdrop-blur-md transition duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--p-accent)_45%,transparent)] hover:bg-(--p-card-hover) hover:shadow-[0_14px_34px_-12px_color-mix(in_srgb,var(--p-accent)_50%,transparent)] active:translate-y-0 active:scale-[0.97] ${RADIUS[buttonStyle]} ${pill ? 'px-4 py-3' : 'p-3.5'}`}
       style={{ animationDelay: `${80 + index * 45}ms` }}
     >
+      {/* A soft shine that sweeps across on hover. */}
       <span
-        className={`grid size-10 shrink-0 place-items-center transition-colors duration-300 ${pill ? 'rounded-full' : buttonStyle === 'square' ? 'rounded' : 'rounded-xl'}`}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-linear-to-r from-transparent via-[color-mix(in_srgb,var(--p-accent)_18%,transparent)] to-transparent opacity-0 transition-[left,opacity] duration-700 ease-out group-hover:left-[120%] group-hover:opacity-100"
+      />
+      <span
+        className={`grid size-10 shrink-0 place-items-center transition duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:-rotate-6 ${pill ? 'rounded-full' : buttonStyle === 'square' ? 'rounded' : 'rounded-xl'}`}
         style={{
           background: icon ? 'color-mix(in srgb, var(--p-accent) 12%, transparent)' : 'transparent',
           color: 'var(--p-accent)',

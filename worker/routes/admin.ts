@@ -6,6 +6,7 @@ import {
   validateOpenTo,
   validateSections,
   validateSkills,
+  validateStory,
 } from '../../shared/homepage'
 import { validateLinkInput, validateProfileInput, type ValidationResult } from '../../shared/validation'
 import type { AccessIdentity } from '../lib/access'
@@ -33,6 +34,7 @@ const HOMEPAGE_SAVERS: Record<string, Saver> = {
   contact: saver(validateContact, hp.saveContactDraft),
   skills: saver(validateSkills, hp.saveSkillsDraft),
   'open-to': saver(validateOpenTo, hp.saveOpenToDraft),
+  story: saver(validateStory, hp.saveStoryDraft),
   sections: saver(validateSections, hp.saveSectionsDraft),
 }
 

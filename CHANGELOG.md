@@ -4,7 +4,15 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Added (pass 2)
+- Separate pages: Home (`/`), About (`/about`), and Work (`/work`), with an animated tab bar. Each page is served with embedded data, its own title, and its own canonical URL.
+- Wider layout on computers: two columns with your photo, name, and icons pinned on the left. Phones keep one column. Layout follows the page's own width (container queries), so the dashboard preview shows the phone version.
+- "My story" (migration `0005`): a story about where you grew up, on the About page with a Read more expander, and in a pop-up card when visitors tap your location.
+- Lively motion and texture: scroll-in reveals, page transitions, a floating avatar with a turning halo, drifting background light, word-by-word lines, a shine sweep on link cards, springy hover and tap effects, and animated film grain. Reduced-motion visitors get none of it.
+
 ### Changed
+- "Say hi" is now "Let's work!". Sections are grouped by page in the dashboard; the up/down buttons move them within their page.
+- Section order now lives in `homepage_section_settings` (migration `0005`), copied from `homepage_sections`, which is kept unused.
 - Homepage made personal rather than LinkedIn-style (migration `0004`): removed the Experience section, replaced the six "Open to" cards with one sentence, and trimmed Say hi to email, location, and the portfolio badge (LinkedIn stays in the social icons). About is now a few sentences. Plain headings instead of all-caps labels, including link category headings. Friendlier placeholder copy, applied only to drafts still holding the original placeholder. Retired tables are kept, not deleted. Route `PUT /api/admin/homepage/open-to` replaces `experience` and `opportunities`.
 
 ### Added

@@ -7,6 +7,8 @@ import {
   type HomepageContact,
   type HomepageContent,
   type HomepageIntro,
+  type HomepageStory,
+  type PageKey,
   type PublicHomepage,
   type PublicSection,
   type SectionKey,
@@ -18,6 +20,8 @@ import { clean, normalizeUrl, str, type ValidationResult } from './validation'
 export const HOMEPAGE_LIMITS = {
   headline: 120,
   about: 1000,
+  storyTitle: 80,
+  storyBody: 2000,
   openTo: 200,
   email: 254,
   location: 80,
@@ -28,10 +32,20 @@ export const HOMEPAGE_LIMITS = {
 /** Headings as visitors see them. The one-sentence section has no heading on the public page. */
 export const SECTION_LABELS: Record<SectionKey, string> = {
   intro: 'About',
+  story: 'My story',
   skills: 'Skills',
   opportunities: 'Up for',
-  contact: 'Say hi',
+  contact: 'Let’s work!',
   testimonials: 'Kind words',
+}
+
+export const PAGE_LABELS: Record<PageKey, string> = { home: 'Home', about: 'About', work: 'Work' }
+export const PAGE_PATHS: Record<PageKey, string> = { home: '/', about: '/about', work: '/work' }
+
+export function pageForPath(path: string): PageKey | null {
+  const clean = path.replace(/\/+$/, '') || '/'
+  if (clean === '/' || clean === '/index.html') return 'home'
+  return (Object.keys(PAGE_PATHS) as PageKey[]).find((p) => PAGE_PATHS[p] === clean) ?? null
 }
 
 const EMAIL = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/
@@ -79,6 +93,15 @@ export function validateIntro(body: unknown): ValidationResult<HomepageIntro> {
   return done(f, {
     headline: text(b.headline, L.headline, 'headline', f),
     about: text(b.about, L.about, 'about', f, { multiline: true }),
+  })
+}
+
+export function validateStory(body: unknown): ValidationResult<HomepageStory> {
+  const b = (body ?? {}) as Record<string, unknown>
+  const f: Fields = {}
+  return done(f, {
+    title: text(b.title, L.storyTitle, 'title', f),
+    body: text(b.body, L.storyBody, 'body', f, { multiline: true }),
   })
 }
 
@@ -142,6 +165,7 @@ export function normalizeSections(stored: SectionSetting[]): SectionSetting[] {
 export function emptyHomepage(): HomepageContent {
   return {
     intro: { headline: '', about: '' },
+    story: { title: '', body: '' },
     contact: { email: '', location: '', portfolioUrl: '', portfolioComingSoon: true },
     skills: [],
     openTo: '',
@@ -156,11 +180,16 @@ export function emptyHomepage(): HomepageContent {
  */
 export function toPublicHomepage(content: HomepageContent): PublicHomepage {
   const sections: PublicSection[] = []
+  const storyVisible = content.sections.some((s) => s.key === 'story' && s.visible)
+  const story = storyVisible && content.story.body ? content.story : null
   for (const { key, visible } of content.sections) {
     if (!visible) continue
     switch (key) {
       case 'intro':
         if (content.intro.headline || content.intro.about) sections.push({ key, intro: content.intro })
+        break
+      case 'story':
+        if (story) sections.push({ key, story })
         break
       case 'skills':
         if (content.skills.length) sections.push({ key, items: content.skills })
@@ -172,7 +201,7 @@ export function toPublicHomepage(content: HomepageContent): PublicHomepage {
         const c = content.contact
         if (c.email || c.location || c.portfolioComingSoon || c.portfolioUrl) {
           // A "coming soon" portfolio never exposes its placeholder URL.
-          sections.push({ key, contact: c.portfolioComingSoon ? { ...c, portfolioUrl: '' } : c })
+          sections.push({ key, contact: c.portfolioComingSoon ? { ...c, portfolioUrl: '' } : c, story: c.location ? story : null })
         }
         break
       }

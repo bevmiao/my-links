@@ -24,7 +24,7 @@ Note: the brief mentions Cloudflare Pages. The deployed system is a single Worke
 ```
 Browser ──▶ Worker (wrangler.jsonc routes)
               ├─ PUBLIC host  (links.flicksbymiao.com)
-              │     /               public profile (SPA, data injected into HTML)
+              │     / /about /work  public pages (SPA, data injected into HTML)
               │     /api/profile   public read-only profile + active links
               │     /api/track/*   view / click analytics (no PII)
               │     /go/:id        click-tracked redirect to active links only
@@ -53,21 +53,24 @@ Directories:
 | `homepage_intro` | Headline (shown under the name) and a short About text. One row per `state`. Older columns (intro, background, interests) are unused. |
 | `homepage_contact` | Email, location, portfolio URL, `portfolio_coming_soon`. One row per `state`. Older columns (phone, LinkedIn, resume) are unused. |
 | `homepage_open_to` | The one-sentence "what I'm up for" line (migration 0004). One row per `state`. |
+| `homepage_story` | "My story": title and body (migration 0005). Shown on About and in the location pop-up. One row per `state`. |
 | `homepage_skills` | Ordered skill tags, each tagged with `state`. |
-| `homepage_sections` | Visibility and order of the sections (`intro`, `skills`, `opportunities` = the one-sentence line, `contact`, `testimonials`) per `state`. |
-| `homepage_experience`, `homepage_opportunities` | **Retired** (pass 1b). Kept so no data is deleted; not read or written. |
+| `homepage_section_settings` | Visibility and order of the sections (`intro`, `story`, `skills`, `opportunities` = the one-sentence line, `contact`, `testimonials`) per `state` (migration 0005). Allowed keys are checked in the app, so new sections need no table rebuild. |
+| `homepage_experience`, `homepage_opportunities`, `homepage_sections` | **Retired** (pass 1b / 0005). Kept so no data is deleted; not read or written. |
 
 `links` also has `category` (migration 0003): an optional group heading on the public page.
 
 **Draft and publish.** Every `homepage_*` table stores a `'draft'` and a `'published'` copy, distinguished by the `state` column. The admin editor writes drafts. Publishing copies every draft table over its published copy in one D1 batch (`worker/lib/homepage.ts`). Public routes read only published rows, and `toPublicHomepage()` (`shared/homepage.ts`) removes hidden sections and the placeholder portfolio URL before anything leaves the Worker. Testimonials have no table yet: the section is a placeholder slot.
 
-Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds the homepage tables and placeholder **drafts only**, so applying it publishes nothing), `0003_add_link_categories.sql` (adds `links.category`), and `0004_add_homepage_open_to.sql` (adds the one-sentence table and refreshes untouched placeholder drafts). 0001–0004 are applied locally and to `my-links-db-dev` (2026-11-21). **Not applied to production** (`my-links-db`). Apply them there before any production deploy of this code, or the public page will fail to load. Future changes go in `0005_*.sql` and up.
+Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds the homepage tables and placeholder **drafts only**, so applying it publishes nothing), `0003_add_link_categories.sql` (adds `links.category`), `0004_add_homepage_open_to.sql` (adds the one-sentence table and refreshes untouched placeholder drafts), and `0005_add_story_and_section_settings.sql` (adds the story and the new section-settings table, copying the old rows). 0001–0004 are applied locally and to `my-links-db-dev` (2026-11-21); 0005 is applied locally only. **Not applied to production** (`my-links-db`). Apply them there before any production deploy of this code, or the public page will fail to load. Future changes go in `0006_*.sql` and up.
 
 ## 5. API architecture
 
 - Public: `GET /api/profile`, `POST /api/track/view`, `POST /api/track/click`, `GET /go/:id`, `GET /media/<key>`.
 - Admin (Access-protected host only): `/api/admin/me`, profile read and write, link CRUD and reorder, image upload and delete (`/api/admin/images/{avatar|background}`), analytics summary.
 - Homepage (admin): `GET /api/admin/homepage` returns the draft, the published copy, `publishedAt`, and `hasUnpublishedChanges`. `PUT /api/admin/homepage/{intro|contact|skills|experience|opportunities|sections}` validates and saves one section to the draft. `POST /api/admin/homepage/publish` makes the draft live. `POST /api/admin/homepage/discard` resets the draft to the live version. All return the same state shape.
+- `PUT /api/admin/homepage/story` saves "My story". `PUT /api/admin/homepage/open-to` saves the one-sentence line.
+- Public pages: `/` (Home: profile and links), `/about`, `/work`. Each gets the embedded data, its own `<title>`, and its own canonical URL. The `contact` section carries the story only when the story section is visible, for the location pop-up.
 - `GET /api/profile` and the HTML-embedded data include `homepage`: the published, visible sections only, or `null` before the first publish.
 - Every admin write requires a same-origin `Origin` header (CSRF) and a valid Access JWT. The Worker fails closed if Access is not configured.
 - All input is validated again on the server (`shared/validation.ts`). Errors are JSON with safe messages.
@@ -83,6 +86,7 @@ Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds th
 - Public profile with avatar, name, @username, bio, social icons, link cards, light and dark theme toggle, custom colours, button styles, and background image.
 - Link click tracking with redirect, and view counting once per browser session.
 - Admin dashboard: profile editor, image uploads, link manager (add, edit, delete, show or hide, drag-and-drop ordering, categories), appearance editor, live preview with unsaved edits, analytics (KPIs, traffic chart, top links, referrers, countries, devices).
+- Pages (pass 2): **Home** (photo, name, line under the name, socials, links), **About** (About, My story with Read more, Skills), **Work** (the one-sentence line, "Let's work!" with email, tappable location that opens a story pop-up, portfolio, Kind words). Wide screens use two columns with the profile pinned on the left; phones use one column. Lively motion: scroll-in reveals, page transitions, a sliding tab highlight, a floating avatar with a turning halo, drifting background light, word-by-word lines, hover and tap feedback, and animated film grain. All motion is disabled for visitors who ask for reduced motion. **Owner decision (2026-11-21): this pulls animation and texture forward from Part Two.**
 - Homepage sections (Part One, pass 1b): a headline under the name, About (a few sentences), Skills (tags), one sentence about what the owner is up for, Say hi (email, location, portfolio "coming soon"), and a Testimonials placeholder. The owner decided the page must not read like LinkedIn: no experience timeline, no opportunity cards, and LinkedIn stays a social icon only. Plain headings, no all-caps labels. Edited in the dashboard **Homepage** tab with save-draft, preview, publish, and reset-to-live. Placeholder content is in place until the owner supplies real copy.
 - Security model: Access on the admin host, Worker JWT verification, email allowlist, CSRF check, strict CSP, HSTS, no-store on admin responses, URL scheme allowlist, and no open redirect.
 

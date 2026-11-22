@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { PublicPageData } from '../../shared/types'
+import { PAGE_LABELS } from '../../shared/homepage'
+import type { PageKey, PublicPageData } from '../../shared/types'
 import { ProfileView } from '../components/ProfileView'
 import { publicApi } from '../lib/api'
 import { useThemeMode } from '../lib/theme'
@@ -14,7 +15,7 @@ function readInitialData(): PublicPageData | null {
   }
 }
 
-export default function PublicProfile() {
+export default function PublicProfile({ page }: { page: PageKey }) {
   const [data, setData] = useState<PublicPageData | null>(readInitialData)
   const [error, setError] = useState(false)
 
@@ -38,20 +39,22 @@ export default function PublicProfile() {
   }, [])
 
   useEffect(() => {
-    if (data) document.title = `${data.profile.displayName} (@${data.profile.username})`
-  }, [data])
+    if (!data) return
+    const base = `${data.profile.displayName} (@${data.profile.username})`
+    document.title = page === 'home' ? base : `${PAGE_LABELS[page]} · ${base}`
+  }, [data, page])
 
   if (error) return <Message title="Something went wrong" body="This page couldn’t be loaded. Please try again shortly." />
   if (!data) return <Skeleton />
-  return <ProfilePage data={data} />
+  return <ProfilePage data={data} page={page} />
 }
 
-function ProfilePage({ data }: { data: PublicPageData }) {
+function ProfilePage({ data, page }: { data: PublicPageData; page: PageKey }) {
   const { mode, toggle } = useThemeMode('profile-theme', data.profile.themeMode)
   useEffect(() => {
     document.documentElement.style.backgroundColor = mode === 'dark' ? data.profile.backgroundDark : data.profile.backgroundLight
   }, [mode, data.profile.backgroundDark, data.profile.backgroundLight])
-  return <ProfileView profile={data.profile} links={data.links} homepage={data.homepage} mode={mode} onToggleTheme={toggle} />
+  return <ProfileView profile={data.profile} links={data.links} homepage={data.homepage} page={page} mode={mode} onToggleTheme={toggle} />
 }
 
 function Skeleton() {

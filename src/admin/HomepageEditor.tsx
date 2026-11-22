@@ -8,8 +8,10 @@ import {
   validateOpenTo,
   validateSections,
   validateSkills,
+  validateStory,
+  PAGE_LABELS,
 } from '../../shared/homepage'
-import type { HomepageAdminState, HomepageContent, SectionKey } from '../../shared/types'
+import { SECTION_PAGE, type HomepageAdminState, type HomepageContent, type SectionKey } from '../../shared/types'
 import { adminApi, ApiRequestError, type HomepageSectionRoute } from '../lib/api'
 import { changedParts, ROUTE_FOR } from './homepageParts'
 import { PageTitle } from './ProfileEditor'
@@ -28,10 +30,12 @@ const VALIDATORS: Record<HomepageSectionRoute, (b: unknown) => { ok: boolean; fi
   contact: validateContact,
   skills: validateSkills,
   'open-to': validateOpenTo,
+  story: validateStory,
 }
 
 const SECTION_HINTS: Record<SectionKey, string> = {
   intro: 'A few sentences about you.',
+  story: 'Where you grew up. Also opens when someone taps your location.',
   skills: 'Tags.',
   opportunities: 'One line about what you’re up for. Shows without a heading.',
   contact: 'Email, location, and portfolio.',
@@ -124,34 +128,44 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
         onRevert={() => setConfirmRevert(true)}
       />
 
-      <Card title="Sections" description="Turn sections on or off and move them up or down.">
-        <ul className="space-y-2">
-          {draft.sections.map((s, i) => (
-            <li
-              key={s.key}
-              className={cx(
-                'flex items-center gap-3 rounded-xl border border-zinc-200/80 px-3 py-2 dark:border-zinc-800',
-                !s.visible && 'opacity-60',
-              )}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{SECTION_LABELS[s.key]}</p>
-                <p className="truncate text-xs text-zinc-500">{SECTION_HINTS[s.key]}</p>
+      <Card title="Sections" description="Your links live on Home. Turn sections on or off and move them up or down within their page.">
+        <div className="space-y-5">
+          {(['about', 'work'] as const).map((pageKey) => {
+            const onPage = draft.sections.map((s, i) => ({ s, i })).filter(({ s }) => SECTION_PAGE[s.key] === pageKey)
+            return (
+              <div key={pageKey}>
+                <p className="mb-2 text-xs font-semibold text-zinc-500">{PAGE_LABELS[pageKey]} page</p>
+                <ul className="space-y-2">
+                  {onPage.map(({ s, i }, pos) => (
+                    <li
+                      key={s.key}
+                      className={cx(
+                        'flex items-center gap-3 rounded-xl border border-zinc-200/80 px-3 py-2 dark:border-zinc-800',
+                        !s.visible && 'opacity-60',
+                      )}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{SECTION_LABELS[s.key]}</p>
+                        <p className="truncate text-xs text-zinc-500">{SECTION_HINTS[s.key]}</p>
+                      </div>
+                      <MoveButtons
+                        label={SECTION_LABELS[s.key]}
+                        index={pos}
+                        count={onPage.length}
+                        onMove={(to) => patch('sections', move(draft.sections, i, onPage[to].i))}
+                      />
+                      <Switch
+                        checked={s.visible}
+                        label={s.visible ? `${SECTION_LABELS[s.key]} is shown. Click to hide.` : `${SECTION_LABELS[s.key]} is hidden. Click to show.`}
+                        onChange={(visible) => patch('sections', draft.sections.map((x, j) => (j === i ? { ...x, visible } : x)))}
+                      />
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <MoveButtons
-                label={SECTION_LABELS[s.key]}
-                index={i}
-                count={draft.sections.length}
-                onMove={(to) => patch('sections', move(draft.sections, i, to))}
-              />
-              <Switch
-                checked={s.visible}
-                label={s.visible ? `${SECTION_LABELS[s.key]} is shown. Click to hide.` : `${SECTION_LABELS[s.key]} is hidden. Click to show.`}
-                onChange={(visible) => patch('sections', draft.sections.map((x, j) => (j === i ? { ...x, visible } : x)))}
-              />
-            </li>
-          ))}
-        </ul>
+            )
+          })}
+        </div>
         {errors['sections.items'] ? <p className="mt-2 text-xs text-red-600 dark:text-red-400">{errors['sections.items']}</p> : null}
       </Card>
 
@@ -184,6 +198,35 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
               value={draft.intro.about}
               invalid={!!err('intro', 'about')}
               onChange={(e) => patch('intro', { ...draft.intro, about: e.target.value })}
+            />
+          </Field>
+        </div>
+      </Card>
+
+      <Card title="My story" description="Where you grew up and what it means to you. It shows on your About page, and pops up when someone taps your location.">
+        <div className="space-y-5">
+          <Field label="Title" htmlFor="hp-story-title" error={err('story', 'title')} counter={{ value: draft.story.title.length, max: L.storyTitle }}>
+            <Input
+              id="hp-story-title"
+              value={draft.story.title}
+              invalid={!!err('story', 'title')}
+              placeholder="Where I grew up"
+              onChange={(e) => patch('story', { ...draft.story, title: e.target.value })}
+            />
+          </Field>
+          <Field
+            label="Your story"
+            htmlFor="hp-story-body"
+            error={err('story', 'body')}
+            counter={{ value: draft.story.body.length, max: L.storyBody }}
+            hint="Longer stories get a “Read more” button on the About page."
+          >
+            <Textarea
+              id="hp-story-body"
+              rows={7}
+              value={draft.story.body}
+              invalid={!!err('story', 'body')}
+              onChange={(e) => patch('story', { ...draft.story, body: e.target.value })}
             />
           </Field>
         </div>

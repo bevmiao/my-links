@@ -5,11 +5,20 @@
  * Each table holds a 'draft' and a 'published' copy (see migrations/0002 and 0004). Editing writes
  * the draft. Publishing copies every draft table over its published copy in one atomic batch.
  *
- * homepage_experience and homepage_opportunities (pass 1) are no longer read or written. They are
- * kept in the database so no data is deleted.
+ * Retired tables, kept so no data is deleted and no longer read or written: homepage_experience and
+ * homepage_opportunities (pass 1), homepage_sections (replaced by homepage_section_settings in 0005).
  */
 import { emptyHomepage, normalizeSections } from '../../shared/homepage'
-import type { HomepageAdminState, HomepageContact, HomepageContent, HomepageIntro, SectionKey, SectionSetting, SkillItem } from '../../shared/types'
+import type {
+  HomepageAdminState,
+  HomepageContact,
+  HomepageContent,
+  HomepageIntro,
+  HomepageStory,
+  SectionKey,
+  SectionSetting,
+  SkillItem,
+} from '../../shared/types'
 import { HttpError } from './http'
 
 type State = 'draft' | 'published'
@@ -29,12 +38,13 @@ const toIso = (sqlTime: string) => `${sqlTime.replace(' ', 'T')}Z`
 
 /** Read one full copy of the homepage. Returns null for 'published' when nothing has been published. */
 export async function readHomepage(db: D1Database, state: State): Promise<HomepageContent | null> {
-  const [intro, contact, skills, openTo, sections] = await db.batch([
+  const [intro, story, contact, skills, openTo, sections] = await db.batch([
     db.prepare('SELECT headline, about FROM homepage_intro WHERE state = ?').bind(state),
+    db.prepare('SELECT title, body FROM homepage_story WHERE state = ?').bind(state),
     db.prepare('SELECT email, location, portfolio_url, portfolio_coming_soon FROM homepage_contact WHERE state = ?').bind(state),
     db.prepare('SELECT label FROM homepage_skills WHERE state = ? ORDER BY sort_order, id').bind(state),
     db.prepare('SELECT sentence FROM homepage_open_to WHERE state = ?').bind(state),
-    db.prepare('SELECT section_key, is_visible FROM homepage_sections WHERE state = ? ORDER BY sort_order').bind(state),
+    db.prepare('SELECT section_key, is_visible FROM homepage_section_settings WHERE state = ? ORDER BY sort_order, section_key').bind(state),
   ])
   const sectionRows = sections.results as { section_key: SectionKey; is_visible: number }[]
   if (state === 'published' && sectionRows.length === 0) return null
@@ -43,8 +53,10 @@ export async function readHomepage(db: D1Database, state: State): Promise<Homepa
   const i = (intro.results as unknown as IntroRow[])[0]
   const c = (contact.results as unknown as ContactRow[])[0]
   const o = (openTo.results as { sentence: string }[])[0]
+  const st = (story.results as unknown as HomepageStory[])[0]
   return {
     intro: i ? { headline: i.headline, about: i.about } : base.intro,
+    story: st ? { title: st.title, body: st.body } : base.story,
     contact: c
       ? { email: c.email, location: c.location, portfolioUrl: c.portfolio_url, portfolioComingSoon: c.portfolio_coming_soon === 1 }
       : base.contact,
@@ -94,6 +106,16 @@ export async function saveContactDraft(db: D1Database, v: HomepageContact): Prom
     .run()
 }
 
+export async function saveStoryDraft(db: D1Database, v: HomepageStory): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO homepage_story (state, title, body, updated_at) VALUES ('draft', ?, ?, datetime('now'))
+       ON CONFLICT (state) DO UPDATE SET title = excluded.title, body = excluded.body, updated_at = excluded.updated_at`,
+    )
+    .bind(v.title, v.body)
+    .run()
+}
+
 export async function saveOpenToDraft(db: D1Database, sentence: string): Promise<void> {
   await db
     .prepare(
@@ -110,9 +132,9 @@ export async function saveSkillsDraft(db: D1Database, items: SkillItem[]): Promi
 }
 
 export async function saveSectionsDraft(db: D1Database, items: SectionSetting[]): Promise<void> {
-  const insert = db.prepare("INSERT INTO homepage_sections (state, section_key, is_visible, sort_order) VALUES ('draft', ?, ?, ?)")
+  const insert = db.prepare("INSERT INTO homepage_section_settings (state, section_key, is_visible, sort_order) VALUES ('draft', ?, ?, ?)")
   await db.batch([
-    db.prepare("DELETE FROM homepage_sections WHERE state = 'draft'"),
+    db.prepare("DELETE FROM homepage_section_settings WHERE state = 'draft'"),
     ...items.map((s, i) => insert.bind(s.key, s.visible ? 1 : 0, i)),
   ])
 }
@@ -127,11 +149,12 @@ const SINGLETONS = {
   homepage_intro: ['headline', 'about'],
   homepage_contact: ['email', 'location', 'portfolio_url', 'portfolio_coming_soon'],
   homepage_open_to: ['sentence'],
+  homepage_story: ['title', 'body'],
 } as const
 
 const LISTS = {
   homepage_skills: ['label', 'sort_order'],
-  homepage_sections: ['section_key', 'is_visible', 'sort_order'],
+  homepage_section_settings: ['section_key', 'is_visible', 'sort_order'],
 } as const
 
 /** Statements that make the `to` copy identical to the `from` copy, for every homepage table in use. */
@@ -159,14 +182,14 @@ function copyStatements(db: D1Database, from: State, to: State): D1PreparedState
 
 /** Make the current draft public. One D1 batch, so visitors never see a half-published page. */
 export async function publishHomepage(db: D1Database): Promise<void> {
-  const draftSections = await db.prepare("SELECT COUNT(*) AS n FROM homepage_sections WHERE state = 'draft'").first<{ n: number }>()
+  const draftSections = await db.prepare("SELECT COUNT(*) AS n FROM homepage_section_settings WHERE state = 'draft'").first<{ n: number }>()
   if (!draftSections?.n) throw new HttpError(409, 'There is no draft to publish yet')
   await db.batch(copyStatements(db, 'draft', 'published'))
 }
 
 /** Throw away unpublished edits by copying the published version back into the draft. */
 export async function discardHomepageDraft(db: D1Database): Promise<void> {
-  const published = await db.prepare("SELECT COUNT(*) AS n FROM homepage_sections WHERE state = 'published'").first<{ n: number }>()
+  const published = await db.prepare("SELECT COUNT(*) AS n FROM homepage_section_settings WHERE state = 'published'").first<{ n: number }>()
   if (!published?.n) throw new HttpError(409, 'Nothing has been published yet, so there is nothing to go back to')
   await db.batch(copyStatements(db, 'published', 'draft'))
 }

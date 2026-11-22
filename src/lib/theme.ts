@@ -101,5 +101,6 @@ export function profilePalette(profile: Pick<Profile, 'accentColor' | 'backgroun
     '--p-card-hover': darkSurface ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,1)',
     '--p-border': darkSurface ? 'rgba(255,255,255,0.09)' : 'rgba(10,10,10,0.08)',
     '--p-shadow': darkSurface ? '0 1px 0 rgba(255,255,255,0.04) inset' : '0 1px 2px rgba(10,10,10,0.04)',
+    '--p-grain-opacity': darkSurface ? '0.15' : '0.11',
   } as CSSProperties
 }
