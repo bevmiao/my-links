@@ -90,12 +90,13 @@ export function LinkManager({ links, setLinks }: Props) {
   }
 
   const activeCount = links.filter((l) => l.isActive).length
+  const categories = [...new Set(links.map((l) => l.category).filter(Boolean))]
 
   return (
     <div className="space-y-6">
       <PageTitle
         title="Links"
-        description="Drag to reorder. Hidden links stay saved but aren’t shown publicly."
+        description="Drag to reorder. Give links a category to group them under a heading. Hidden links stay saved but aren’t shown publicly."
         actions={
           <Button
             variant="primary"
@@ -147,6 +148,7 @@ export function LinkManager({ links, setLinks }: Props) {
         key={editing === null ? 'closed' : editing === 'new' ? 'new' : editing.id}
         open={editing !== null}
         initial={editing && editing !== 'new' ? editing : null}
+        categories={categories}
         onClose={() => setEditing(null)}
         onSubmit={submit}
       />
@@ -218,7 +220,14 @@ function SortableRow({
         {icon ? <icon.Icon size={16} /> : <Link2 size={16} />}
       </div>
       <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
-        <p className="truncate text-sm font-medium">{link.title}</p>
+        <p className="flex items-center gap-2 text-sm font-medium">
+          <span className="truncate">{link.title}</span>
+          {link.category ? (
+            <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+              {link.category}
+            </span>
+          ) : null}
+        </p>
         <p className="truncate text-xs text-zinc-500">{host}</p>
       </button>
       <div className="flex shrink-0 items-center gap-1">

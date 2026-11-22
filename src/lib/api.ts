@@ -2,6 +2,8 @@ import type {
   AdminIdentity,
   AnalyticsSummary,
   ApiError,
+  HomepageAdminState,
+  HomepageContent,
   Link,
   LinkInput,
   Profile,
@@ -71,4 +73,21 @@ export const adminApi = {
   deleteLink: (id: number) => request<void>(`/api/admin/links/${id}`, { method: 'DELETE' }),
   reorderLinks: (ids: number[]) => request<Link[]>('/api/admin/links/order', { method: 'PUT', body: json({ ids }) }),
   analytics: (days: number) => request<AnalyticsSummary>(`/api/admin/analytics?days=${days}`),
+  getHomepage: () => request<HomepageAdminState>('/api/admin/homepage'),
+  /** Save one section to the draft. Nothing becomes public until publishHomepage(). */
+  saveHomepageSection: <K extends HomepageSectionRoute>(section: K, body: HomepageSectionBody[K]) =>
+    request<HomepageAdminState>(`/api/admin/homepage/${section}`, { method: 'PUT', body: json(body) }),
+  publishHomepage: () => request<HomepageAdminState>('/api/admin/homepage/publish', { method: 'POST' }),
+  discardHomepageDraft: () => request<HomepageAdminState>('/api/admin/homepage/discard', { method: 'POST' }),
 }
+
+/** Request bodies for PUT /api/admin/homepage/<section>. */
+export interface HomepageSectionBody {
+  intro: HomepageContent['intro']
+  contact: HomepageContent['contact']
+  skills: { items: HomepageContent['skills'] }
+  experience: { items: HomepageContent['experience'] }
+  opportunities: { items: HomepageContent['opportunities'] }
+  sections: { items: HomepageContent['sections'] }
+}
+export type HomepageSectionRoute = keyof HomepageSectionBody

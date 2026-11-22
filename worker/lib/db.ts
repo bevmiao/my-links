@@ -24,6 +24,7 @@ interface LinkRow {
   url: string
   description: string
   icon: string
+  category: string
   is_active: number
   sort_order: number
   created_at: string
@@ -67,6 +68,7 @@ function toLink(r: LinkRow): Link {
     url: r.url,
     description: r.description,
     icon: r.icon,
+    category: r.category,
     isActive: r.is_active === 1,
     sortOrder: r.sort_order,
     createdAt: toIso(r.created_at),
@@ -129,7 +131,7 @@ export async function listLinks(db: D1Database): Promise<Link[]> {
 
 export async function listPublicLinks(db: D1Database): Promise<PublicLink[]> {
   const { results } = await db
-    .prepare('SELECT id, title, url, description, icon FROM links WHERE is_active = 1 ORDER BY sort_order, id')
+    .prepare('SELECT id, title, url, description, icon, category FROM links WHERE is_active = 1 ORDER BY sort_order, id')
     .all<PublicLink>()
   return results
 }
@@ -149,11 +151,11 @@ export async function createLink(db: D1Database, input: LinkInput): Promise<Link
   if ((count?.n ?? 0) >= LIMITS.links) throw new HttpError(409, `You can have at most ${LIMITS.links} links`)
   const row = await db
     .prepare(
-      `INSERT INTO links (title, url, description, icon, is_active, sort_order)
-       VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM links))
+      `INSERT INTO links (title, url, description, icon, category, is_active, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM links))
        RETURNING *`,
     )
-    .bind(input.title, input.url, input.description, input.icon, input.isActive ? 1 : 0)
+    .bind(input.title, input.url, input.description, input.icon, input.category, input.isActive ? 1 : 0)
     .first<LinkRow>()
   return toLink(row!)
 }
@@ -161,10 +163,10 @@ export async function createLink(db: D1Database, input: LinkInput): Promise<Link
 export async function updateLink(db: D1Database, id: number, input: LinkInput): Promise<Link | null> {
   const row = await db
     .prepare(
-      `UPDATE links SET title = ?, url = ?, description = ?, icon = ?, is_active = ?, updated_at = datetime('now')
+      `UPDATE links SET title = ?, url = ?, description = ?, icon = ?, category = ?, is_active = ?, updated_at = datetime('now')
        WHERE id = ? RETURNING *`,
     )
-    .bind(input.title, input.url, input.description, input.icon, input.isActive ? 1 : 0, id)
+    .bind(input.title, input.url, input.description, input.icon, input.category, input.isActive ? 1 : 0, id)
     .first<LinkRow>()
   return row ? toLink(row) : null
 }

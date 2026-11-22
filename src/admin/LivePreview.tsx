@@ -10,7 +10,7 @@ export function LivePreview({ profile, links, compact }: { profile: Profile; lin
   const [mode, setMode] = useState<ResolvedMode>(() => resolveMode(profile.themeMode))
   const visible = links
     .filter((l) => l.isActive)
-    .map(({ id, title, url, description, icon }) => ({ id, title, url, description, icon }))
+    .map(({ id, title, url, description, icon, category }) => ({ id, title, url, description, icon, category }))
 
   return (
     <div>

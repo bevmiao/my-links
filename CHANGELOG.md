@@ -5,6 +5,8 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 ## [Unreleased] — Part One (development)
 
 ### Added
+- Homepage sections with draft / publish (migration `0002`): intro and about, contact and professional links (LinkedIn, resume link, portfolio "coming soon"), skills, experience, "open to" opportunity categories, a testimonials placeholder slot, and per-section visibility and order. Placeholder content ships as drafts only, so nothing changes publicly until you press Publish. API: `GET /api/admin/homepage`, `PUT /api/admin/homepage/{intro|contact|skills|experience|opportunities|sections}`, `POST /api/admin/homepage/publish`, `POST /api/admin/homepage/discard`. The public API returns only published, visible sections.
+- Link categories (migration `0003`): an optional category per link, editable in the link editor, with suggestions from existing categories.
 - Guarded dev deploy: `npm run deploy:dev:check` and `npm run deploy:dev` (`scripts/deploy-dev.mjs`). They build for dev and stop before uploading if the config or dry run names any production resource or hostname.
 - Development environment in `wrangler.jsonc` (`env.dev`): separate Worker (`my-links-dev`), D1 (`my-links-db-dev`), R2 (`my-links-assets-dev`), and dev hostnames.
 - Project documentation: `CONTEXT.md`, `INSTRUCTIONS.md`, `DEVELOPMENT.md`, `.env.example`, `CHANGELOG.md`.

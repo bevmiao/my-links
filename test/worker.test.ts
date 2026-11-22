@@ -110,7 +110,7 @@ describe('profile', () => {
 describe('links', () => {
   it('creates, edits, toggles, reorders and deletes', async () => {
     const a = await createLink({ title: 'A', url: 'a.example.com' })
-    const b = await createLink({ title: 'B', url: 'https://b.example.com', icon: 'github', description: 'bee' })
+    const b = await createLink({ title: 'B', url: 'https://b.example.com', icon: 'github', description: 'bee', category: '  Work ' })
     const c = await createLink({ title: 'C', url: 'mailto:c@example.com', isActive: false })
     expect([a.sortOrder, b.sortOrder, c.sortOrder]).toEqual([0, 1, 2])
 
@@ -127,8 +127,8 @@ describe('links', () => {
     // Public view: only active links, in order, without internal fields.
     const page = (await (await call(`${PUBLIC}/api/profile`)).json()) as PublicPageData
     expect(page.links).toEqual([
-      { id: a.id, title: 'A2', url: 'https://a.example.com/', description: '', icon: '' },
-      { id: b.id, title: 'B', url: 'https://b.example.com/', description: 'bee', icon: 'github' },
+      { id: a.id, title: 'A2', url: 'https://a.example.com/', description: '', icon: '', category: '' },
+      { id: b.id, title: 'B', url: 'https://b.example.com/', description: 'bee', icon: 'github', category: 'Work' },
     ])
 
     expect((await adminCall(token, `/api/admin/links/${b.id}`, { method: 'DELETE' })).status).toBe(204)

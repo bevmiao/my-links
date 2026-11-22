@@ -1,11 +1,42 @@
 /** Admin API. Only reached after authenticateAdmin() succeeds (see worker/index.ts). */
 import type { AdminIdentity } from '../../shared/types'
-import { validateLinkInput, validateProfileInput } from '../../shared/validation'
+import {
+  validateContact,
+  validateExperience,
+  validateIntro,
+  validateOpportunities,
+  validateSections,
+  validateSkills,
+} from '../../shared/homepage'
+import { validateLinkInput, validateProfileInput, type ValidationResult } from '../../shared/validation'
 import type { AccessIdentity } from '../lib/access'
 import { clampRange, getSummary } from '../lib/analytics'
 import * as db from '../lib/db'
+import * as hp from '../lib/homepage'
 import { errorResponse, HttpError, json, readJson } from '../lib/http'
 import { isImageKind, storeUpload } from '../lib/media'
+
+type Saver = (db: D1Database, body: unknown) => Promise<Record<string, string> | null>
+
+/** Validate a section and write it to the draft. Returns field errors, or null on success. */
+function saver<T>(validate: (b: unknown) => ValidationResult<T>, save: (db: D1Database, v: T) => Promise<void>): Saver {
+  return async (db, body) => {
+    const r = validate(body)
+    if (!r.ok) return r.fields
+    await save(db, r.value)
+    return null
+  }
+}
+
+/** One draft route per homepage section: PUT /api/admin/homepage/<section>. */
+const HOMEPAGE_SAVERS: Record<string, Saver> = {
+  intro: saver(validateIntro, hp.saveIntroDraft),
+  contact: saver(validateContact, hp.saveContactDraft),
+  skills: saver(validateSkills, hp.saveSkillsDraft),
+  experience: saver(validateExperience, hp.saveExperienceDraft),
+  opportunities: saver(validateOpportunities, hp.saveOpportunitiesDraft),
+  sections: saver(validateSections, hp.saveSectionsDraft),
+}
 
 function parseId(raw: string): number {
   const id = Number(raw)
@@ -99,6 +130,7 @@ export async function handleAdminApi(request: Request, env: Env, ctx: ExecutionC
               url: existing.url,
               description: existing.description,
               icon: existing.icon,
+              category: existing.category,
               isActive: existing.isActive,
               ...(patch && typeof patch === 'object' ? patch : {}),
             }
@@ -111,6 +143,28 @@ export async function handleAdminApi(request: Request, env: Env, ctx: ExecutionC
     if (method === 'DELETE') {
       return (await db.deleteLink(env.DB, id)) ? new Response(null, { status: 204 }) : errorResponse(404, 'Link not found')
     }
+  }
+
+  /* ---------- Homepage sections (draft / publish) ---------- */
+  if (path === '/homepage' && method === 'GET') return json(await hp.getHomepageAdminState(env.DB))
+
+  if (path === '/homepage/publish' && method === 'POST') {
+    await hp.publishHomepage(env.DB)
+    return json(await hp.getHomepageAdminState(env.DB))
+  }
+  if (path === '/homepage/discard' && method === 'POST') {
+    await hp.discardHomepageDraft(env.DB)
+    return json(await hp.getHomepageAdminState(env.DB))
+  }
+
+  const section = path.match(/^\/homepage\/([a-z]+)$/)
+  if (section && method === 'PUT') {
+    const saver = HOMEPAGE_SAVERS[section[1]]
+    if (!saver) return errorResponse(404, 'Unknown section')
+    const body = await readJson(request, 64 * 1024)
+    const fields = await saver(env.DB, body)
+    if (fields) return errorResponse(422, 'Please fix the highlighted fields', fields)
+    return json(await hp.getHomepageAdminState(env.DB))
   }
 
   /* ---------- Analytics ---------- */

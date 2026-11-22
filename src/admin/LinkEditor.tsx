@@ -6,19 +6,30 @@ import { LINK_ICONS } from '../components/icons'
 import { ApiRequestError } from '../lib/api'
 import { Button, cx, Field, Input, Modal, Switch } from './ui'
 
-const EMPTY: LinkInput = { title: '', url: '', description: '', icon: '', isActive: true }
+const EMPTY: LinkInput = { title: '', url: '', description: '', icon: '', category: '', isActive: true }
 
 interface Props {
   open: boolean
   initial: Link | null
+  /** Existing category names, offered as suggestions. */
+  categories: string[]
   onClose: () => void
   onSubmit: (input: LinkInput) => Promise<void>
 }
 
-export function LinkEditor({ open, initial, onClose, onSubmit }: Props) {
+export function LinkEditor({ open, initial, categories, onClose, onSubmit }: Props) {
   // State starts fresh for each edit session: the parent passes a `key` per link / "new".
   const [form, setForm] = useState<LinkInput>(() =>
-    initial ? { title: initial.title, url: initial.url, description: initial.description, icon: initial.icon, isActive: initial.isActive } : EMPTY,
+    initial
+      ? {
+          title: initial.title,
+          url: initial.url,
+          description: initial.description,
+          icon: initial.icon,
+          category: initial.category,
+          isActive: initial.isActive,
+        }
+      : EMPTY,
   )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
@@ -93,6 +104,28 @@ export function LinkEditor({ open, initial, onClose, onSubmit }: Props) {
           counter={{ value: form.description.length, max: LIMITS.linkDescription }}
         >
           <Input id="link-desc" value={form.description} invalid={!!errors.description} onChange={(e) => set({ description: e.target.value })} placeholder="A short line under the title" />
+        </Field>
+
+        <Field
+          label="Category (optional)"
+          htmlFor="link-category"
+          error={errors.category}
+          hint="Links with the same category are grouped under one heading. Leave blank to keep it at the top."
+        >
+          <Input
+            id="link-category"
+            list="link-category-options"
+            value={form.category}
+            maxLength={LIMITS.linkCategory}
+            invalid={!!errors.category}
+            onChange={(e) => set({ category: e.target.value })}
+            placeholder="Social, Work, Elsewhere…"
+          />
+          <datalist id="link-category-options">
+            {categories.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </Field>
 
         <Field label="Icon (optional)" error={errors.icon}>

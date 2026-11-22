@@ -18,12 +18,12 @@ describe('normalizeUrl', () => {
 describe('validateLinkInput', () => {
   it('trims and defaults', () => {
     const r = validateLinkInput({ title: '  Hello ', url: 'example.com' })
-    expect(r).toEqual({ ok: true, value: { title: 'Hello', url: 'https://example.com/', description: '', icon: '', isActive: true } })
+    expect(r).toEqual({ ok: true, value: { title: 'Hello', url: 'https://example.com/', description: '', icon: '', category: '', isActive: true } })
   })
   it('reports field errors', () => {
-    const r = validateLinkInput({ title: 'x'.repeat(200), url: 'javascript:1', icon: '<b>', isActive: 'yes' })
+    const r = validateLinkInput({ title: 'x'.repeat(200), url: 'javascript:1', icon: '<b>', category: 'c'.repeat(41), isActive: 'yes' })
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(Object.keys(r.fields).sort()).toEqual(['icon', 'isActive', 'title', 'url'])
+    if (!r.ok) expect(Object.keys(r.fields).sort()).toEqual(['category', 'icon', 'isActive', 'title', 'url'])
   })
 })
 

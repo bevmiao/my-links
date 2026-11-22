@@ -1,12 +1,18 @@
 import type { PublicPageData } from '../../shared/types'
 import { isBot, recordEvent, referrerHost } from '../lib/analytics'
+import { toPublicHomepage } from '../../shared/homepage'
 import { getActiveLinkUrl, getProfile, listPublicLinks } from '../lib/db'
+import { readHomepage } from '../lib/homepage'
 import { json } from '../lib/http'
 import { serveMedia } from '../lib/media'
 
 export async function getPublicPageData(env: Env): Promise<PublicPageData> {
-  const [profile, links] = await Promise.all([getProfile(env.DB), listPublicLinks(env.DB)])
-  return { profile, links }
+  const [profile, links, published] = await Promise.all([
+    getProfile(env.DB),
+    listPublicLinks(env.DB),
+    readHomepage(env.DB, 'published'), // drafts are never read on public routes
+  ])
+  return { profile, links, homepage: published ? toPublicHomepage(published) : null }
 }
 
 /** Public, unauthenticated routes. Returns null when the path isn't one of them. */

@@ -12,6 +12,7 @@ export const LIMITS = {
   linkDescription: 160,
   url: 2048,
   icon: 32,
+  linkCategory: 40,
   socials: 12,
   links: 100,
 } as const
@@ -33,12 +34,12 @@ const USERNAME = /^[a-zA-Z0-9._-]+$/
 const ICON = /^[a-z0-9-]*$/
 const PLATFORM = /^[a-z0-9-]{1,24}$/
 
-function str(v: unknown): string {
+export function str(v: unknown): string {
   return typeof v === 'string' ? v.trim() : ''
 }
 
 /** Strip ASCII control characters (keeps newlines in multi-line fields). */
-function clean(v: string, allowNewlines = false): string {
+export function clean(v: string, allowNewlines = false): string {
   // eslint-disable-next-line no-control-regex
   const re = allowNewlines ? /[\u0000-\u0009\u000B-\u001F\u007F]/g : /[\u0000-\u001F\u007F]/g
   return v.replace(re, '')
@@ -86,12 +87,15 @@ export function validateLinkInput(body: unknown): ValidationResult<LinkInput> {
   const icon = str(b.icon)
   if (icon.length > LIMITS.icon || !ICON.test(icon)) fields.icon = 'Unknown icon.'
 
+  const category = clean(str(b.category)).replace(/\s+/g, ' ')
+  if (category.length > LIMITS.linkCategory) fields.category = `Keep it under ${LIMITS.linkCategory} characters.`
+
   if (b.isActive !== undefined && typeof b.isActive !== 'boolean') fields.isActive = 'Must be true or false.'
 
   if (Object.keys(fields).length) return { ok: false, fields }
   return {
     ok: true,
-    value: { title, url: url!, description, icon, isActive: b.isActive === undefined ? true : (b.isActive as boolean) },
+    value: { title, url: url!, description, icon, category, isActive: b.isActive === undefined ? true : (b.isActive as boolean) },
   }
 }
 
