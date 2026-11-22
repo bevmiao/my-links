@@ -92,7 +92,7 @@ These rules apply to every change. If a rule conflicts with a request, stop and 
 
 ## 12. Cloudflare deployment rules
 
-- Development: `npx wrangler deploy --env dev`. Requires the dev Access application (see DEVELOPMENT.md). Until `ACCESS_AUD` in `env.dev` is set, the admin host fails closed, which is the intended safe state.
+- Development: build with `CLOUDFLARE_ENV=dev npm run build`, check `npx wrangler deploy --dry-run` shows only dev bindings, then run `npx wrangler deploy`. Never run `wrangler deploy --env dev` after a plain `npm run build`. The Vite plugin fixes the environment at build time, so that sequence targets production. See DEVELOPMENT.md section 4. Without `ACCESS_AUD` in `env.dev`, the admin host fails closed, which is the intended safe state.
 - Production: `npm run deploy` only after approval. Apply migrations with `npm run db:migrate:remote` first, then deploy.
 - Never run `db:seed:remote` on production unless the owner asks, because it replaces all links.
 - Check the deployment with the curl commands in the README after every deploy.

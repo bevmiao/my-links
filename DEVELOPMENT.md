@@ -47,17 +47,34 @@ Resources (already created):
 |---|---|---|
 | D1 | `my-links-db-dev` | `980aacda-351e-4828-b370-d9b084b50734`. Migration 0001 applied. |
 | R2 | `my-links-assets-dev` | Standard storage, ENAM region. |
-| Worker | `my-links-dev` | Created on first deploy. |
-| Hostnames | `dev.links.flicksbymiao.com`, `dev.admin.flicksbymiao.com` | Custom domains on deploy. |
+| Worker | `my-links-dev` | Deployed. |
+| Hostnames | `dev.links.flicksbymiao.com`, `dev.admin.flicksbymiao.com` | Custom domains, attached on deploy. |
+| Access | "my-links dev admin" on `dev.admin.flicksbymiao.com` | AUD tag set in `env.dev.vars.ACCESS_AUD`. If `ACCESS_AUD` is missing, the dev admin host fails closed by design. |
 
-Steps still required before the dev admin works remotely:
+### Deploying the dev Worker
 
-1. In Zero Trust, create a **Self-hosted Access application** for `dev.admin.flicksbymiao.com`. Use an empty path and an Allow policy for your email.
-2. Copy its **Application Audience (AUD) tag** into `ACCESS_AUD` in the `env.dev` block of `wrangler.jsonc`, replacing `REPLACE_ME`.
-3. Deploy the dev Worker: `npx wrangler deploy --env dev`.
-4. Check it: `curl -i https://dev.admin.flicksbymiao.com/api/admin/me` should redirect to Access login. `curl -i https://dev.links.flicksbymiao.com/admin` should return 404.
+The build uses the Cloudflare Vite plugin. **The plugin picks the environment when you build, not when you deploy.** `npm run build` writes `dist/my_links/wrangler.json` and `.wrangler/deploy/config.json`, and `wrangler deploy` reads that generated config. The `--env` flag on `wrangler deploy` does not switch it. A plain build produces the **production** config, so `npm run build` followed by `npx wrangler deploy --env dev` would fail or deploy to production. Do not use that sequence.
 
-Until step 2 is done, the dev admin host fails closed (returns errors) by design.
+Deploy dev like this:
+
+```bash
+# Git Bash / macOS / Linux
+CLOUDFLARE_ENV=dev npm run build
+# PowerShell instead:  $env:CLOUDFLARE_ENV="dev"; npm run build; Remove-Item Env:CLOUDFLARE_ENV
+
+npx wrangler deploy --dry-run   # check: only my-links-db-dev, my-links-assets-dev, dev.* hostnames
+npx wrangler deploy             # deploys my-links-dev (the generated config already targets dev)
+```
+
+Read the dry-run binding list before you deploy. If it shows `my-links-db`, `my-links-assets`, or `links.flicksbymiao.com`, stop and rebuild with `CLOUDFLARE_ENV=dev`.
+
+Check it afterwards:
+
+- `curl -i https://dev.links.flicksbymiao.com/` returns 200.
+- `curl -i https://dev.links.flicksbymiao.com/admin` returns 404.
+- `curl -i https://dev.admin.flicksbymiao.com/api/admin/me` returns a 302 or 403 with a `Location` header pointing to the Access login.
+
+The first time a custom domain is attached, your machine may have cached a "not found" DNS answer. Run `ipconfig /flushdns` on Windows, or wait a few minutes.
 
 Remote D1 commands for dev:
 
@@ -76,6 +93,8 @@ Production deploys are not part of routine development. Only after explicit appr
 npm run db:migrate:remote
 npm run deploy
 ```
+
+`npm run deploy` rebuilds without `CLOUDFLARE_ENV`, so it always produces and deploys the production config. Make sure `CLOUDFLARE_ENV` is not set in your shell when you run it.
 
 ## 6. Line endings (Windows)
 

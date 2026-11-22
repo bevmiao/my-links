@@ -75,7 +75,9 @@
 	"upload_source_maps": true,
 
 	/**
-	 * Development environment: `wrangler deploy --env dev` and `wrangler dev --env dev`.
+	 * Development environment. Deploy with `CLOUDFLARE_ENV=dev npm run build` then
+	 * `wrangler deploy` (the Vite plugin selects the environment at BUILD time; `--env` on
+	 * `wrangler deploy` does not switch it). See DEVELOPMENT.md section 4.
 	 * Completely separate Worker, D1 database and R2 bucket from production. Never point this
 	 * environment at the production resources above. Production never reads from these.
 	 */
