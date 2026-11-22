@@ -6,6 +6,7 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ### Changed (link cards)
 - Link cards on Home are white with dark text in dark mode too, like in light mode, so they're easier to read on a dark page or background photo. Only the cards change; the rest of the dark theme stays as it was.
+- Dev deploy: white link cards to `my-links-dev` (version `e1bed349`, no migration). Checked in dark mode on the dev site: cards 95% white with dark text, no console errors. Production was not modified.
 
 ### Changed (client strip, round 2)
 - "Worked with" shows just the logos now, no white tiles. Each logo can be shown in one colour that follows light and dark mode (on by default; needs a transparent background), or in its own colours.
