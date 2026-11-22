@@ -97,8 +97,8 @@
 				"PUBLIC_HOSTNAME": "dev.links.flicksbymiao.com",
 				"ADMIN_HOSTNAME": "dev.admin.flicksbymiao.com",
 				"ACCESS_TEAM_DOMAIN": "throbbing-tree-63ad.cloudflareaccess.com",
-				/** REPLACE_ME: AUD tag of a Cloudflare Access app protecting dev.admin.flicksbymiao.com. Until set, admin requests fail closed. */
-				"ACCESS_AUD": "REPLACE_ME",
+				/** AUD tag of the Access app protecting dev.admin.flicksbymiao.com ("my-links dev admin"). */
+				"ACCESS_AUD": "f5991b599de17eb5fdeaceb47989d066851adf399e228bbe3b3fffce79881a62",
 				"ADMIN_EMAILS": "ryanbmiao@gmail.com"
 			},
 			"d1_databases": [
