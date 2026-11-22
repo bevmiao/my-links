@@ -8,6 +8,7 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 - "Worked with" shows just the logos now, no white tiles. Each logo can be shown in one colour that follows light and dark mode (on by default; needs a transparent background), or in its own colours.
 - Clients can open into a pop-up card that grows out of the logo: a title, bullet points on what you worked on, and up to four photos with descriptions. Clients without details stay plain logos. Migration `0009` adds the fields; photos are stored in R2 under `client-photo/` with the same checks as other uploads (PNG, JPEG or WebP, resized in the browser, 3 MB limit). Two placeholder clients got sample text.
 - The story pop-up and the client card share one pop-up component (`PopCard`).
+- Fixed before it reached the dev site: "one colour" defaulted to on, which would have turned logos with solid backgrounds into plain blocks and two-tone logos (like a white letter in a black circle) into solid shapes. Migration `0010` keeps every already-uploaded logo in its own colours, and new uploads get a suggested setting: one colour only for single-colour logos on a transparent background. You can still switch it per client.
 - Client logos are bigger (44 px tall, more space between them) and react to hover like your other buttons: they lift, grow a little, tilt slightly (alternating sides, like the skill chips), turn your accent colour, and get a soft accent glow. Full-colour logos keep their colours and get the lift and glow.
 
 ### Added (pass 4: clients, share preview, QR)

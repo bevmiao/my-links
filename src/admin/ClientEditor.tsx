@@ -4,6 +4,7 @@ import { clientHasDetails, clientLogoUrl, HOMEPAGE_LIMITS as L } from '../../sha
 import type { ClientItem } from '../../shared/types'
 import { IMAGE_RULES } from '../../shared/validation'
 import { adminApi } from '../lib/api'
+import { suggestOneColour } from '../lib/logoTone'
 import { MAX_INPUT_BYTES, SHRINK_MAX_SIDE, shrinkImage } from '../lib/shrinkImage'
 import { MoveButtons } from './MoveButtons'
 import { Button, cx, Field, Input, Switch, useToast } from './ui'
@@ -11,7 +12,7 @@ import { Button, cx, Field, Input, Switch, useToast } from './ui'
 const isPlaceholder = (c: ClientItem) =>
   c.logoKey?.startsWith('placeholder/') || c.name.startsWith('Placeholder ') || c.title.startsWith('Placeholder')
 
-const newClient = (name: string): ClientItem => ({ name, logoKey: null, logoMono: true, title: '', bullets: [], images: [] })
+const newClient = (name: string): ClientItem => ({ name, logoKey: null, logoMono: false, title: '', bullets: [], images: [] })
 
 /**
  * Shrink in the browser, then check type and size, so the visitor gets a fast answer. The Worker
@@ -142,9 +143,15 @@ function ClientRow({
   async function uploadLogo(original: File) {
     setBusy(true)
     try {
-      const { key } = await adminApi.uploadClientLogo(await prepare(original, 'client-logo'))
-      onChange({ logoKey: key })
-      toast('Logo uploaded. Save or publish to use it.')
+      const file = await prepare(original, 'client-logo')
+      const [{ key }, logoMono] = await Promise.all([adminApi.uploadClientLogo(file), suggestOneColour(file)])
+      // One colour only when it would work for this logo (see src/lib/logoTone.ts); you can still switch it.
+      onChange({ logoKey: key, logoMono })
+      toast(
+        logoMono
+          ? 'Logo uploaded. It will follow your text colour. Save or publish to use it.'
+          : 'Logo uploaded in its own colours. Save or publish to use it.',
+      )
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Upload failed', 'error')
     } finally {
