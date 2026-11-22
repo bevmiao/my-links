@@ -43,21 +43,28 @@ export async function shrinkImage(file: File, maxSide: number, maxBytes: number)
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(bitmap, 0, 0, width, height)
 
-    let blob: Blob | null = null
-    for (const quality of [0.86, 0.8, 0.72, 0.62]) {
-      blob = await toBlob(canvas, 'image/webp', quality)
-      // Browsers that can't encode WebP silently return PNG; use JPEG there instead.
-      if (blob && blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', quality)
-      if (blob && blob.size <= maxBytes) break
-    }
-    if (!blob) return file
-
-    const ext = blob.type === 'image/webp' ? 'webp' : 'jpg'
-    const name = `${file.name.replace(/\.[^.]+$/, '') || 'image'}.${ext}`
-    return new File([blob], name, { type: blob.type, lastModified: Date.now() })
+    return (await encodeCanvas(canvas, maxBytes, file.name)) ?? file
   } finally {
     bitmap.close()
   }
+}
+
+/**
+ * Encodes a canvas as WebP (JPEG where WebP encoding isn't available), stepping quality down a
+ * little until it fits `maxBytes`. Returns null if the browser can't encode at all.
+ */
+export async function encodeCanvas(canvas: HTMLCanvasElement, maxBytes: number, originalName: string): Promise<File | null> {
+  let blob: Blob | null = null
+  for (const quality of [0.86, 0.8, 0.72, 0.62]) {
+    blob = await toBlob(canvas, 'image/webp', quality)
+    // Browsers that can't encode WebP silently return PNG; use JPEG there instead.
+    if (blob && blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', quality)
+    if (blob && blob.size <= maxBytes) break
+  }
+  if (!blob) return null
+  const ext = blob.type === 'image/webp' ? 'webp' : 'jpg'
+  const name = `${originalName.replace(/\.[^.]+$/, '') || 'image'}.${ext}`
+  return new File([blob], name, { type: blob.type, lastModified: Date.now() })
 }
 
 function toBlob(canvas: HTMLCanvasElement, type: string, quality: number) {

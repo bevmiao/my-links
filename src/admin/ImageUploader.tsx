@@ -1,9 +1,10 @@
-import { ImagePlus, Trash2, UploadCloud } from 'lucide-react'
+import { Crop, ImagePlus, Trash2, UploadCloud } from 'lucide-react'
 import { useRef, useState, type DragEvent } from 'react'
 import type { Profile } from '../../shared/types'
 import { ALLOWED_IMAGE_TYPES, IMAGE_RULES, type ImageKind } from '../../shared/validation'
 import { adminApi } from '../lib/api'
 import { MAX_INPUT_BYTES, SHRINK_MAX_SIDE, shrinkImage } from '../lib/shrinkImage'
+import { AvatarCropper } from './AvatarCropper'
 import { Button, cx, useToast } from './ui'
 
 interface ImageUploaderProps {
@@ -17,7 +18,8 @@ const isAllowed = (type: string) => (ALLOWED_IMAGE_TYPES as readonly string[]).i
 
 /**
  * Shrinks the photo in the browser (src/lib/shrinkImage.ts), then uploads it to R2 through the
- * Worker. The client checks type/size for fast feedback; the Worker re-validates (size +
+ * Worker. Profile photos first open the cropper (AvatarCropper) so the owner can position them
+ * in the circle; "Adjust position" reopens it on the current photo. The client checks type/size for fast feedback; the Worker re-validates (size +
  * magic-byte sniffing) before storing anything.
  */
 export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }: ImageUploaderProps) {
@@ -25,7 +27,57 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
   const inputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [crop, setCrop] = useState<{ bitmap: ImageBitmap; name: string } | null>(null)
   const rules = IMAGE_RULES[kind]
+
+  function closeCrop() {
+    crop?.bitmap.close()
+    setCrop(null)
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  /** Profile photos (not GIFs, so animation is kept) go through the cropper first. */
+  async function choose(original: File) {
+    if (kind !== 'avatar' || original.type === 'image/gif' || !original.type.startsWith('image/') || original.type === 'image/svg+xml' || original.size > MAX_INPUT_BYTES) {
+      return upload(original)
+    }
+    try {
+      setCrop({ bitmap: await createImageBitmap(original), name: original.name })
+    } catch {
+      // The browser can't open it for editing; fall back to the normal checks and upload.
+      return upload(original)
+    }
+  }
+
+  /** Reopen the cropper on the photo that's already up. */
+  async function adjust() {
+    if (!currentUrl) return
+    setBusy(true)
+    try {
+      const res = await fetch(currentUrl)
+      if (!res.ok) throw new Error('Couldn’t load your current photo.')
+      const blob = await res.blob()
+      if (blob.type === 'image/gif') throw new Error('GIFs can’t be repositioned. Upload a new photo instead.')
+      setCrop({ bitmap: await createImageBitmap(blob), name: 'avatar' })
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Couldn’t open that photo', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveCrop(file: File) {
+    closeCrop()
+    setBusy(true)
+    try {
+      onUpdated(await adminApi.uploadImage(kind, file))
+      toast('Profile photo updated')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Upload failed', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function upload(original: File) {
     // Any image the browser can open is fine here (e.g. HEIC on iPhone); it's converted below.
@@ -74,7 +126,7 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
     e.preventDefault()
     setDragging(false)
     const file = e.dataTransfer.files?.[0]
-    if (file) upload(file)
+    if (file) choose(file)
   }
 
   return (
@@ -101,11 +153,19 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">{currentUrl ? 'Replace image' : 'Upload an image'}</p>
-        <p className="mt-0.5 text-xs text-zinc-500">Drag & drop or browse. Any size photo works; it’s resized automatically so your page loads fast.</p>
+        <p className="mt-0.5 text-xs text-zinc-500">
+          Drag & drop or browse. Any size photo works; it’s resized automatically so your page loads fast.
+          {kind === 'avatar' ? ' You’ll get to position it in the circle.' : ''}
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button size="sm" icon={<UploadCloud size={14} />} loading={busy} onClick={() => inputRef.current?.click()}>
             Choose file
           </Button>
+          {currentUrl && kind === 'avatar' ? (
+            <Button size="sm" variant="secondary" icon={<Crop size={14} />} disabled={busy} onClick={adjust}>
+              Adjust position
+            </Button>
+          ) : null}
           {currentUrl ? (
             <Button size="sm" variant="ghost" icon={<Trash2 size={14} />} disabled={busy} onClick={remove}>
               Remove
@@ -119,10 +179,13 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0]
-            if (f) upload(f)
+            if (f) choose(f)
           }}
         />
       </div>
+      {kind === 'avatar' ? (
+        <AvatarCropper bitmap={crop?.bitmap ?? null} fileName={crop?.name ?? 'avatar'} maxBytes={rules.maxBytes} onCancel={closeCrop} onSave={saveCrop} />
+      ) : null}
     </div>
   )
 }
