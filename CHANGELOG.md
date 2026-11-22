@@ -7,6 +7,7 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 ### Changed (client cards in dark mode)
 - The pop-up card that opens from a "Worked with" logo uses your light-mode look in dark mode too: light card, dark text. Nothing else changes in dark mode.
 - Undone: a dev-only change that had made the link cards on Home white in dark mode (dev version `e1bed349`). That was the wrong element; the link cards are back to how they were.
+- Dev deploy: `my-links-dev` version `ea687e37` (no migration). Checked in dark mode on the dev site: link cards dark as before, the Club21 client card opens light with dark text, no console errors. Production was not modified.
 
 ### Changed (client strip, round 2)
 - "Worked with" shows just the logos now, no white tiles. Each logo can be shown in one colour that follows light and dark mode (on by default; needs a transparent background), or in its own colours.
