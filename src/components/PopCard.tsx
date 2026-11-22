@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { AnimatePresence } from 'motion/react'
 import * as m from 'motion/react-m'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 
 /**
  * Pop-up card that grows out of the element that opened it and shrinks back into it when closed.
@@ -18,6 +18,7 @@ export function PopCard({
   labelledBy,
   grain = true,
   className = 'max-w-md',
+  palette,
   children,
 }: {
   open: boolean
@@ -30,6 +31,8 @@ export function PopCard({
   grain?: boolean
   /** Width of the card. */
   className?: string
+  /** CSS variables for the card only, e.g. the light-mode palette for the client cards. */
+  palette?: CSSProperties
   children: ReactNode
 }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -75,7 +78,9 @@ export function PopCard({
               initial={hidden}
               animate={{ opacity: 1, scale: 1, x: 0, y: 0, transition: { type: 'spring', stiffness: 380, damping: 30 } }}
               exit={{ ...hidden, transition: { duration: 0.22, ease: [0.4, 0, 1, 1] } }}
-              className={`relative w-full overflow-hidden rounded-(--p-radius-card) border border-(--p-border) bg-(--p-bg) shadow-2xl ${className}`}
+              style={palette}
+              // text colour set here (not only on the dialog) so a `palette` on the card also applies to text.
+              className={`relative w-full overflow-hidden rounded-(--p-radius-card) border border-(--p-border) bg-(--p-bg) text-(--p-fg) shadow-2xl ${className}`}
             >
               {grain ? <div aria-hidden="true" className="grain absolute" /> : null}
               <div

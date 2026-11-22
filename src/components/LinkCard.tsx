@@ -1,5 +1,4 @@
 import { ArrowUpRight } from 'lucide-react'
-import type { CSSProperties } from 'react'
 import * as m from 'motion/react-m'
 import type { ButtonStyle, PublicLink } from '../../shared/types'
 import { tapSquish } from '../lib/motion'
@@ -17,17 +16,15 @@ interface LinkCardProps {
   /** In the dashboard preview, open the destination directly and don't record clicks. */
   preview?: boolean
   index?: number
-  /** CSS variables for the card's colours (the light-mode card in both themes; see linkCardSurface). */
-  surface?: CSSProperties
 }
 
-export function LinkCard({ link, buttonStyle, preview, index = 0, surface }: LinkCardProps) {
+export function LinkCard({ link, buttonStyle, preview, index = 0 }: LinkCardProps) {
   const icon = getLinkIcon(link.icon)
   const pill = buttonStyle === 'pill'
   return (
     // The entrance runs on this wrapper: a finished CSS animation keeps holding `transform`,
     // which would block the tap animation on the card itself.
-    <div className="animate-fade-up" style={{ ...surface, animationDelay: `${80 + index * 45}ms` }}>
+    <div className="animate-fade-up" style={{ animationDelay: `${80 + index * 45}ms` }}>
     <m.a
       {...tapSquish}
       // Real visitors go through /go/:id, which records the click server-side and redirects.

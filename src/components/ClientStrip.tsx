@@ -10,7 +10,7 @@ import { CloseButton, PopCard } from './PopCard'
  * page's text colour (the logo is used as a mask), so they read in light and dark mode alike.
  * Clients with details open into a card that grows out of the logo.
  */
-export function ClientStrip({ items, grain = true }: { items: PublicClient[]; grain?: boolean }) {
+export function ClientStrip({ items, grain = true, cardPalette }: { items: PublicClient[]; grain?: boolean; cardPalette?: CSSProperties }) {
   const [active, setActive] = useState<{ index: number; from: DOMRect } | null>(null)
   const [open, setOpen] = useState(false)
   const client = active ? items[active.index] : null
@@ -50,7 +50,7 @@ export function ClientStrip({ items, grain = true }: { items: PublicClient[]; gr
           )
         })}
       </ul>
-      {client ? <ClientCard client={client} open={open} from={active!.from} grain={grain} onClose={() => setOpen(false)} /> : null}
+      {client ? <ClientCard client={client} open={open} from={active!.from} grain={grain} palette={cardPalette} onClose={() => setOpen(false)} /> : null}
     </section>
   )
 }
@@ -115,18 +115,21 @@ function ClientCard({
   open,
   from,
   grain,
+  palette,
   onClose,
 }: {
   client: PublicClient
   open: boolean
   from: DOMRect
   grain: boolean
+  /** The light-mode palette: the card looks the same in both themes (owner decision, 2026-11-22). */
+  palette?: CSSProperties
   onClose: () => void
 }) {
   const titleId = useId()
   const photos = client.images
   return (
-    <PopCard open={open} onClose={onClose} from={from} labelledBy={titleId} grain={grain} className="max-w-lg">
+    <PopCard open={open} onClose={onClose} from={from} labelledBy={titleId} grain={grain} palette={palette} className="max-w-lg">
       <div className="flex items-start justify-between gap-4">
         <div className="min-h-11 pt-1.5">
           <ClientLogo client={client} decorative size="h-8" />

@@ -5,7 +5,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { PAGE_LABELS, PAGE_PATHS } from '../../shared/homepage'
 import { SECTION_PAGE, type PageKey, type Profile, type PublicHomepage, type PublicLink, type PublicSection } from '../../shared/types'
 import { tapSquishIcon } from '../lib/motion'
-import { linkCardSurface, profilePalette, type ResolvedMode } from '../lib/theme'
+import { profilePalette, type ResolvedMode } from '../lib/theme'
 import { Avatar } from './Avatar'
 import { PageSections } from './HomepageSections'
 import { LinkCard } from './LinkCard'
@@ -49,6 +49,8 @@ function groupLinks(links: PublicLink[]) {
  */
 export function ProfileView({ profile, links, homepage, mode, onToggleTheme, page = 'home', onNavigate, preview }: ProfileViewProps) {
   const palette = profilePalette(profile, mode)
+  // Client cards ("Worked with") always use the light-mode look: white card, dark text.
+  const cardPalette = profilePalette(profile, 'light')
   const glowStrength = mode === 'dark' ? 24 : 15
   // With a background photo, skip the accent-coloured glows so the photo keeps its real colours.
   const hasPhoto = !!profile.backgroundUrl
@@ -140,15 +142,15 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pag
               <NothingHere preview={preview} onNavigate={onNavigate} />
             ) : page === 'home' ? (
               <>
-                <HomeLinks links={links} profile={profile} mode={mode} preview={preview} empty={!sections.length} />
+                <HomeLinks links={links} profile={profile} preview={preview} empty={!sections.length} />
                 {byPage('home').length ? (
                   <div className="mt-(--p-section-gap)">
-                    <PageSections sections={byPage('home')} preview={preview} grain={profile.grain !== 'off'} />
+                    <PageSections sections={byPage('home')} preview={preview} grain={profile.grain !== 'off'} cardPalette={cardPalette} />
                   </div>
                 ) : null}
               </>
             ) : (
-              <PageSections sections={byPage(page)} preview={preview} grain={profile.grain !== 'off'} />
+              <PageSections sections={byPage(page)} preview={preview} grain={profile.grain !== 'off'} cardPalette={cardPalette} />
             )}
           </div>
         </main>
@@ -276,20 +278,7 @@ function PageTabs({
   )
 }
 
-function HomeLinks({
-  links,
-  profile,
-  mode,
-  preview,
-  empty,
-}: {
-  links: PublicLink[]
-  profile: Profile
-  mode: ResolvedMode
-  preview?: boolean
-  empty: boolean
-}) {
-  const surface = linkCardSurface(profile, mode)
+function HomeLinks({ links, profile, preview, empty }: { links: PublicLink[]; profile: Profile; preview?: boolean; empty: boolean }) {
   return (
     <nav aria-label="Links" className="flex w-full flex-col gap-7">
       {groupLinks(links).map((group) => (
@@ -299,7 +288,7 @@ function HomeLinks({
           ) : null}
           <div className="grid gap-3 @4xl:grid-cols-2">
             {group.links.map(({ link, index }) => (
-              <LinkCard key={link.id} link={link} buttonStyle={profile.buttonStyle} preview={preview} index={index} surface={surface} />
+              <LinkCard key={link.id} link={link} buttonStyle={profile.buttonStyle} preview={preview} index={index} />
             ))}
           </div>
         </div>

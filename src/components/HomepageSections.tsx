@@ -1,7 +1,7 @@
 import { ArrowRight, ArrowUpRight, ChevronDown, Mail, MapPin } from 'lucide-react'
 import { useReducedMotion } from 'motion/react'
 import * as m from 'motion/react-m'
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { SECTION_LABELS } from '../../shared/homepage'
 import type { HomepageContact, HomepageStory, PublicSection } from '../../shared/types'
 import { tapSquish, tapSquishSoft } from '../lib/motion'
@@ -14,12 +14,23 @@ import { VideoGrid } from './VideoGrid'
  * The homepage sections that belong to one page (About or Work), in the owner's order.
  * Styling uses the public palette (--p-*) and the tokens in src/index.css.
  */
-export function PageSections({ sections, preview, grain = true }: { sections: PublicSection[]; preview?: boolean; grain?: boolean }) {
+export function PageSections({
+  sections,
+  preview,
+  grain = true,
+  cardPalette,
+}: {
+  sections: PublicSection[]
+  preview?: boolean
+  grain?: boolean
+  /** The light-mode palette, for the client cards (white with dark text in both themes). */
+  cardPalette?: CSSProperties
+}) {
   return (
     <div className="flex w-full flex-col gap-(--p-section-gap)">
       {sections.map((section, i) => (
         <Reveal key={section.key} delay={Math.min(i, 3) * 90} instant={preview}>
-          <Section section={section} preview={preview} grain={grain} />
+          <Section section={section} preview={preview} grain={grain} cardPalette={cardPalette} />
         </Reveal>
       ))}
     </div>
@@ -61,7 +72,7 @@ function Titled({ id, children, big }: { id: PublicSection['key']; children: Rea
   )
 }
 
-function Section({ section, preview, grain }: { section: PublicSection; preview?: boolean; grain?: boolean }) {
+function Section({ section, preview, grain, cardPalette }: { section: PublicSection; preview?: boolean; grain?: boolean; cardPalette?: CSSProperties }) {
   switch (section.key) {
     case 'intro':
       // The headline is shown under the name; this section is just the words.
@@ -108,7 +119,7 @@ function Section({ section, preview, grain }: { section: PublicSection; preview?
         </Titled>
       )
     case 'clients':
-      return <ClientStrip items={section.items} grain={grain} />
+      return <ClientStrip items={section.items} grain={grain} cardPalette={cardPalette} />
     case 'testimonials':
       return (
         <Titled id="testimonials">
