@@ -1,6 +1,6 @@
 /** Profile/background images stored in R2. */
 import { IMAGE_RULES, sniffImageType, type ImageKind } from '../../shared/validation'
-import { HttpError } from './http'
+import { HttpError, readBodyCapped } from './http'
 
 const EXT: Record<string, string> = {
   'image/png': 'png',
@@ -23,14 +23,16 @@ export function isImageKind(v: string): v is ImageKind {
  */
 export async function storeUpload(bucket: R2Bucket, kind: ImageKind, request: Request): Promise<string> {
   const { maxBytes, label } = IMAGE_RULES[kind]
-  const declared = Number(request.headers.get('Content-Length') ?? 0)
-  if (declared > maxBytes + 16 * 1024) throw new HttpError(413, `Image must be ${label} or smaller`)
-  if (!(request.headers.get('Content-Type') ?? '').startsWith('multipart/form-data'))
-    throw new HttpError(415, 'Expected multipart/form-data')
+  const contentType = request.headers.get('Content-Type') ?? ''
+  if (!contentType.startsWith('multipart/form-data')) throw new HttpError(415, 'Expected multipart/form-data')
+
+  // Cap the raw body while streaming it (multipart overhead gets 16 KB of headroom), then parse
+  // the buffered copy, so an oversized upload is rejected before any form parsing happens.
+  const body = await readBodyCapped(request, maxBytes + 16 * 1024, `Image must be ${label} or smaller`)
 
   let form: FormData
   try {
-    form = await request.formData()
+    form = await new Response(body as BodyInit, { headers: { 'Content-Type': contentType } }).formData()
   } catch {
     throw new HttpError(400, 'Invalid form data')
   }

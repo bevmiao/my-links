@@ -22,16 +22,44 @@ export function errorResponse(status: number, error: string, fields?: Record<str
   return json(body, { status })
 }
 
+/**
+ * Read a request body into memory, aborting as soon as it exceeds `maxBytes`. The limit is
+ * enforced while streaming, so a missing or dishonest Content-Length can't force the Worker to
+ * buffer an arbitrarily large body first.
+ */
+export async function readBodyCapped(request: Request, maxBytes: number, message = 'Request body too large'): Promise<Uint8Array> {
+  const declared = Number(request.headers.get('Content-Length') ?? 0)
+  if (declared > maxBytes) throw new HttpError(413, message)
+  if (!request.body) return new Uint8Array(0)
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > maxBytes) {
+      await reader.cancel()
+      throw new HttpError(413, message)
+    }
+    chunks.push(value)
+  }
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return out
+}
+
 /** Parse a JSON request body with a content-type and size guard. */
 export async function readJson(request: Request, maxBytes = 32 * 1024): Promise<unknown> {
   const type = request.headers.get('Content-Type') ?? ''
   if (!type.toLowerCase().startsWith('application/json')) throw new HttpError(415, 'Expected application/json')
-  const declared = Number(request.headers.get('Content-Length') ?? 0)
-  if (declared > maxBytes) throw new HttpError(413, 'Request body too large')
-  const text = await request.text()
-  if (text.length > maxBytes) throw new HttpError(413, 'Request body too large')
+  const bytes = await readBodyCapped(request, maxBytes)
   try {
-    return JSON.parse(text)
+    return JSON.parse(new TextDecoder().decode(bytes))
   } catch {
     throw new HttpError(400, 'Invalid JSON')
   }

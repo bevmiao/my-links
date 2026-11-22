@@ -46,7 +46,7 @@
 		 * Optional comma-separated allowlist of emails, checked in addition to the Access policy
 		 * (defence in depth). Leave empty to rely on the Access policy alone.
 		 */
-		"ADMIN_EMAILS": ""
+		"ADMIN_EMAILS": "ryanbmiao@gmail.com"
 	},
 
 	"d1_databases": [
