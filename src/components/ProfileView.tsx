@@ -1,9 +1,10 @@
-import { Check, Share2 } from 'lucide-react'
+import { Share2 } from 'lucide-react'
 import { domAnimation, LazyMotion, MotionConfig, useReducedMotion, useSpring, useTransform, useVelocity } from 'motion/react'
 import * as m from 'motion/react-m'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { PAGE_LABELS, PAGE_PATHS } from '../../shared/homepage'
 import { SECTION_PAGE, type PageKey, type Profile, type PublicHomepage, type PublicLink, type PublicSection } from '../../shared/types'
+import { tapSquishIcon } from '../lib/motion'
 import { profilePalette, type ResolvedMode } from '../lib/theme'
 import { Avatar } from './Avatar'
 import { PageSections } from './HomepageSections'
@@ -11,6 +12,9 @@ import { LinkCard } from './LinkCard'
 import { RouterLink } from './RouterLink'
 import { SocialIcons } from './SocialIcons'
 import { ThemeToggle } from './ThemeToggle'
+
+// Loaded only when someone opens Share, so the QR encoder isn't part of the page's download.
+const ShareDialog = lazy(() => import('./ShareDialog'))
 
 interface ProfileViewProps {
   profile: Profile
@@ -311,32 +315,31 @@ function NothingHere({ preview, onNavigate }: { preview?: boolean; onNavigate?: 
   )
 }
 
+/** Opens the share pop-up (QR code, copy link, share sheet). Does nothing in the dashboard preview. */
 function ShareButton({ preview, title }: { preview?: boolean; title: string }) {
-  const [copied, setCopied] = useState(false)
-  async function share() {
-    if (preview) return
-    const url = window.location.origin + window.location.pathname
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, url })
-        return
-      }
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1600)
-    } catch {
-      /* user cancelled */
-    }
-  }
+  const [open, setOpen] = useState(false)
+  // The public page's home address on this site's own host (links.flicksbymiao.com in production).
+  const url = typeof window === 'undefined' ? '/' : `${window.location.origin}/`
   return (
-    <button
-      type="button"
-      onClick={share}
-      aria-label={copied ? 'Link copied' : 'Share this page'}
-      title={copied ? 'Copied!' : 'Share'}
-      className="grid size-10 place-items-center rounded-full border border-(--p-border) bg-(--p-card) text-(--p-fg) backdrop-blur-md transition duration-300 hover:-rotate-12 hover:bg-(--p-card-hover) active:scale-90"
-    >
-      {copied ? <Check size={17} aria-hidden="true" /> : <Share2 size={17} aria-hidden="true" />}
-    </button>
+    <>
+      <m.button
+        type="button"
+        {...tapSquishIcon}
+        onClick={() => {
+          if (!preview) setOpen(true)
+        }}
+        aria-label="Share this page"
+        aria-haspopup="dialog"
+        title="Share"
+        className="grid size-10 place-items-center rounded-full border border-(--p-border) bg-(--p-card) text-(--p-fg) backdrop-blur-md transition-no-transform duration-300 hover:-rotate-12 hover:bg-(--p-card-hover)"
+      >
+        <Share2 size={17} aria-hidden="true" />
+      </m.button>
+      {open ? (
+        <Suspense fallback={null}>
+          <ShareDialog url={url} name={title} onClose={() => setOpen(false)} />
+        </Suspense>
+      ) : null}
+    </>
   )
 }
