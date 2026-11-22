@@ -32,3 +32,6 @@ dist-ssr
 
 # Python bytecode (from the UI/UX Pro Max skill scripts)
 __pycache__/
+
+# Local-only copies of live data (private: visitor stats). Never commit.
+backups/
