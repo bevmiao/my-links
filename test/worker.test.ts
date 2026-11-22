@@ -37,6 +37,20 @@ describe('hostname routing & Access enforcement', () => {
     expect(await res.json()).toEqual({ error: 'Missing Cloudflare Access token' })
   })
 
+  it('allows WebAssembly and blob: workers on the dashboard only (HEIC conversion), never on public pages', async () => {
+    const admin = (await call(`${ADMIN}/admin`, { headers: { 'Cf-Access-Jwt-Assertion': token } })).headers.get('Content-Security-Policy') ?? ''
+    expect(admin).toContain("script-src 'self' 'wasm-unsafe-eval';")
+    expect(admin).toContain("worker-src 'self' blob:;")
+    expect(admin).not.toContain("'unsafe-eval'")
+    expect(admin).not.toMatch(/script-src[^;]*'unsafe-inline'/)
+    for (const path of ['/', '/about', '/work']) {
+      const pub = (await call(`${PUBLIC}${path}`)).headers.get('Content-Security-Policy') ?? ''
+      expect(pub).toContain("script-src 'self';")
+      expect(pub).not.toContain('wasm-unsafe-eval')
+      expect(pub).not.toContain('worker-src')
+    }
+  })
+
   it('protects admin pages and assets too, not just the API', async () => {
     expect((await call(`${ADMIN}/admin`)).status).toBe(401)
     expect((await call(`${ADMIN}/favicon.svg`)).status).toBe(401)

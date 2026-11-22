@@ -3,6 +3,7 @@ import { useRef, useState, type DragEvent } from 'react'
 import type { Profile } from '../../shared/types'
 import { ALLOWED_IMAGE_TYPES, IMAGE_RULES, type ProfileImageKind } from '../../shared/validation'
 import { adminApi } from '../lib/api'
+import { isPhotoFile, looksLikeHeic, openableImage } from '../lib/heic'
 import { MAX_INPUT_BYTES, SHRINK_MAX_SIDE, shrinkImage } from '../lib/shrinkImage'
 import { AvatarCropper } from './AvatarCropper'
 import { Button, cx, useToast } from './ui'
@@ -36,9 +37,25 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  /** Profile photos (not GIFs, so animation is kept) go through the cropper first. */
-  async function choose(original: File) {
-    if (kind !== 'avatar' || original.type === 'image/gif' || !original.type.startsWith('image/') || original.type === 'image/svg+xml' || original.size > MAX_INPUT_BYTES) {
+  /**
+   * iPhone HEIC photos are converted to JPEG first where the browser can't open them
+   * (src/lib/heic.ts). Profile photos (not GIFs, so animation is kept) then go through the cropper.
+   */
+  async function choose(picked: File) {
+    let original = picked
+    if (looksLikeHeic(picked) && picked.size <= MAX_INPUT_BYTES) {
+      setBusy(true)
+      try {
+        original = await openableImage(picked)
+      } catch (e) {
+        toast(e instanceof Error ? e.message : 'That photo couldn’t be opened', 'error')
+        if (inputRef.current) inputRef.current.value = ''
+        return
+      } finally {
+        setBusy(false)
+      }
+    }
+    if (kind !== 'avatar' || original.type === 'image/gif' || !isPhotoFile(original) || original.size > MAX_INPUT_BYTES) {
       return upload(original)
     }
     try {
@@ -80,8 +97,8 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
   }
 
   async function upload(original: File) {
-    // Any image the browser can open is fine here (e.g. HEIC on iPhone); it's converted below.
-    if (!original.type.startsWith('image/') || original.type === 'image/svg+xml') {
+    // Any image the browser can open is fine here; HEIC was already converted in choose().
+    if (!isPhotoFile(original)) {
       toast('Use a photo: JPEG, PNG, WebP, HEIC or GIF.', 'error')
       return
     }
@@ -175,7 +192,7 @@ export function ImageUploader({ kind, currentUrl, onUpdated, shape = 'circle' }:
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0]

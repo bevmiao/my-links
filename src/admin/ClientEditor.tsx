@@ -4,6 +4,7 @@ import { clientHasDetails, clientLogoUrl, HOMEPAGE_LIMITS as L } from '../../sha
 import type { ClientItem } from '../../shared/types'
 import { IMAGE_RULES } from '../../shared/validation'
 import { adminApi } from '../lib/api'
+import { isPhotoFile, openableImage } from '../lib/heic'
 import { suggestOneColour } from '../lib/logoTone'
 import { MAX_INPUT_BYTES, SHRINK_MAX_SIDE, shrinkImage } from '../lib/shrinkImage'
 import { MoveButtons } from './MoveButtons'
@@ -18,10 +19,12 @@ const newClient = (name: string): ClientItem => ({ name, logoKey: null, logoMono
  * Shrink in the browser, then check type and size, so the visitor gets a fast answer. The Worker
  * re-checks everything (real type from the file's bytes, size) before storing it.
  */
-async function prepare(original: File, kind: 'client-logo' | 'client-photo'): Promise<File> {
+async function prepare(picked: File, kind: 'client-logo' | 'client-photo'): Promise<File> {
   const rules = IMAGE_RULES[kind]
-  if (original.type === 'image/svg+xml') throw new Error('SVG files aren’t supported. Use PNG, JPEG or WebP.')
-  if (!original.type.startsWith('image/') || original.size > MAX_INPUT_BYTES) throw new Error('Use a PNG, JPEG or WebP image.')
+  if (picked.type === 'image/svg+xml') throw new Error('SVG files aren’t supported. Use PNG, JPEG or WebP.')
+  if (!isPhotoFile(picked) || picked.size > MAX_INPUT_BYTES) throw new Error('Use a PNG, JPEG, WebP or iPhone (HEIC) photo.')
+  // iPhone HEIC photos become JPEG first where the browser can't open them (src/lib/heic.ts).
+  const original = await openableImage(picked)
   const file = await shrinkImage(original, SHRINK_MAX_SIDE[kind], rules.maxBytes, { keepAlpha: kind === 'client-logo' })
   if (!(rules.types as readonly string[]).includes(file.type)) throw new Error('Use a PNG, JPEG or WebP image (no GIFs or SVGs).')
   if (file.size > rules.maxBytes) throw new Error(`That image is still larger than ${rules.label}.`)
@@ -420,7 +423,7 @@ function PhotoEditor({
         ref={input}
         type="file"
         multiple
-        accept="image/png,image/jpeg,image/webp,image/heic,image/heif"
+        accept="image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif"
         className="hidden"
         onChange={(ev) => upload(Array.from(ev.target.files ?? []))}
       />

@@ -88,7 +88,10 @@ export function withSecurityHeaders(res: Response, opts: { local: boolean; admin
         'Content-Security-Policy',
         [
           "default-src 'self'",
-          "script-src 'self'",
+          // The dashboard (only) converts iPhone HEIC photos in the browser (src/lib/heic.ts): the
+          // converter compiles WebAssembly inside a blob: Web Worker. The public site allows neither.
+          opts.admin ? "script-src 'self' 'wasm-unsafe-eval'" : "script-src 'self'",
+          ...(opts.admin ? ["worker-src 'self' blob:"] : []),
           "style-src 'self' 'unsafe-inline'",
           // YouTube: thumbnails from i.ytimg.com, and the privacy-enhanced player, which only
           // loads after a visitor taps a video (src/components/VideoGrid.tsx).

@@ -108,6 +108,7 @@ Deleting a link keeps its past clicks in your all-time totals (`ON DELETE SET NU
 
 ## Image storage (R2)
 
+- **iPhone (HEIC) photos:** browsers other than Safari can't open HEIC, so the dashboard converts it to JPEG first (`src/lib/heic.ts`, using `heic-to`'s CSP build). The converter (~0.8 MB gzipped) is loaded on demand, only in the dashboard and only for HEIC files the browser can't already open. It runs WebAssembly in a `blob:` worker, so the admin CSP adds `'wasm-unsafe-eval'` and `worker-src 'self' blob:`; the public CSP doesn't.
 - **Automatic resizing in the browser:** the dashboard accepts any size photo (including iPhone HEIC where the browser can open it) and shrinks it before upload (`src/lib/shrinkImage.ts`): longest side 800 px for profile photos and 2400 px for backgrounds, re-encoded as WebP (JPEG fallback). A 15 MB camera photo becomes a sharp file of a few hundred KB or less. GIFs are not resized, so animation is kept. No dependency.
 - Profile photos (≤ 2 MB after resizing) and background images (≤ 5 MB after resizing) are uploaded through `POST /api/admin/images/{avatar|background}` and stored as `avatar/<uuid>.<ext>` / `background/<uuid>.<ext>`.
 - **Validation happens on the server:** the request size is checked before the body is read, and the real type is detected from the file's magic bytes, so the browser's declared type is ignored. Only PNG, JPEG, WebP and GIF are accepted. SVG is refused because it can contain script.
