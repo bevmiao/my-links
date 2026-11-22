@@ -3,8 +3,9 @@ import { useReducedMotion } from 'motion/react'
 import * as m from 'motion/react-m'
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { SECTION_LABELS } from '../../shared/homepage'
-import type { HomepageContact, HomepageStory, PublicClient, PublicSection } from '../../shared/types'
+import type { HomepageContact, HomepageStory, PublicSection } from '../../shared/types'
 import { tapSquish, tapSquishSoft } from '../lib/motion'
+import { ClientStrip } from './ClientStrip'
 import { Reveal, Words } from './Reveal'
 import { StoryDialog } from './StoryDialog'
 import { VideoGrid } from './VideoGrid'
@@ -107,7 +108,7 @@ function Section({ section, preview, grain }: { section: PublicSection; preview?
         </Titled>
       )
     case 'clients':
-      return <ClientStrip items={section.items} />
+      return <ClientStrip items={section.items} grain={grain} />
     case 'testimonials':
       return (
         <Titled id="testimonials">
@@ -115,47 +116,6 @@ function Section({ section, preview, grain }: { section: PublicSection; preview?
         </Titled>
       )
   }
-}
-
-/**
- * "Worked with": a row of client logos. Each sits on a light tile so any logo stays readable in
- * both themes. The client's name is the alt text, and is shown as text when there's no logo (or
- * the logo fails to load).
- */
-function ClientStrip({ items }: { items: PublicClient[] }) {
-  return (
-    <section aria-labelledby="section-clients">
-      <h2 id="section-clients" className="text-center text-(length:--p-text-small) font-medium text-(--p-muted) @4xl:text-left">
-        {SECTION_LABELS.clients}
-      </h2>
-      <ul className="mt-3 flex flex-wrap justify-center gap-2.5 @4xl:justify-start">
-        {items.map((c, i) => (
-          <li
-            key={`${c.name}-${i}`}
-            className="grid h-14 min-w-24 place-items-center rounded-(--p-radius-inner) border border-(--p-border) bg-white/95 px-4 shadow-(--p-shadow)"
-          >
-            <ClientLogo client={c} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-function ClientLogo({ client }: { client: PublicClient }) {
-  const [failed, setFailed] = useState(false)
-  if (client.logoUrl && !failed)
-    return (
-      <img
-        src={client.logoUrl}
-        alt={client.name}
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailed(true)}
-        className="max-h-8 w-auto max-w-32 object-contain"
-      />
-    )
-  return <span className="max-w-40 text-center font-display text-base leading-tight font-medium text-balance text-zinc-800">{client.name}</span>
 }
 
 /**

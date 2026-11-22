@@ -168,7 +168,7 @@ describe('homepage draft / publish', () => {
       'SELECT title, body FROM homepage_story WHERE state = ?',
       'SELECT label, sort_order FROM homepage_skills WHERE state = ? ORDER BY sort_order',
       'SELECT video_id, title, sort_order FROM homepage_videos WHERE state = ? ORDER BY sort_order',
-      'SELECT name, logo_key, sort_order FROM homepage_clients WHERE state = ? ORDER BY sort_order',
+      'SELECT name, logo_key, logo_mono, title, bullets, images, sort_order FROM homepage_clients WHERE state = ? ORDER BY sort_order',
       'SELECT section_key, is_visible, sort_order FROM homepage_section_settings WHERE state = ? ORDER BY sort_order',
     ]
     for (const q of queries) expect(await rows(q, 'published')).toEqual(await rows(q, 'draft'))

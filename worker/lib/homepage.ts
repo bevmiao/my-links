@@ -36,6 +36,34 @@ interface ContactRow {
   portfolio_coming_soon: number
 }
 
+interface ClientRow {
+  name: string
+  logo_key: string | null
+  logo_mono: number
+  title: string
+  bullets: string
+  images: string
+}
+
+/** JSON columns are written only by this Worker after validation; anything unreadable becomes empty. */
+function parseJsonList<T>(raw: string): T[] {
+  try {
+    const v = JSON.parse(raw) as unknown
+    return Array.isArray(v) ? (v as T[]) : []
+  } catch {
+    return []
+  }
+}
+
+const toClient = (r: ClientRow): ClientItem => ({
+  name: r.name,
+  logoKey: r.logo_key,
+  logoMono: r.logo_mono === 1,
+  title: r.title,
+  bullets: parseJsonList<string>(r.bullets),
+  images: parseJsonList<ClientItem['images'][number]>(r.images),
+})
+
 const toIso = (sqlTime: string) => `${sqlTime.replace(' ', 'T')}Z`
 
 /** Read one full copy of the homepage. Returns null for 'published' when nothing has been published. */
@@ -47,7 +75,9 @@ export async function readHomepage(db: D1Database, state: State): Promise<Homepa
     db.prepare('SELECT label FROM homepage_skills WHERE state = ? ORDER BY sort_order, id').bind(state),
     db.prepare('SELECT sentence FROM homepage_open_to WHERE state = ?').bind(state),
     db.prepare('SELECT video_id AS videoId, title FROM homepage_videos WHERE state = ? ORDER BY sort_order, id').bind(state),
-    db.prepare('SELECT name, logo_key AS logoKey FROM homepage_clients WHERE state = ? ORDER BY sort_order, id').bind(state),
+    db
+      .prepare('SELECT name, logo_key, logo_mono, title, bullets, images FROM homepage_clients WHERE state = ? ORDER BY sort_order, id')
+      .bind(state),
     db.prepare('SELECT section_key, is_visible FROM homepage_section_settings WHERE state = ? ORDER BY sort_order, section_key').bind(state),
   ])
   const sectionRows = sections.results as { section_key: SectionKey; is_visible: number }[]
@@ -67,7 +97,7 @@ export async function readHomepage(db: D1Database, state: State): Promise<Homepa
     skills: skills.results as unknown as SkillItem[],
     openTo: o?.sentence ?? '',
     videos: videos.results as unknown as VideoItem[],
-    clients: clients.results as unknown as ClientItem[],
+    clients: (clients.results as unknown as ClientRow[]).map(toClient),
     sections: normalizeSections(sectionRows.map((r) => ({ key: r.section_key, visible: r.is_visible === 1 }))),
   }
 }
@@ -146,17 +176,26 @@ export async function saveVideosDraft(db: D1Database, items: VideoItem[]): Promi
 }
 
 export async function saveClientsDraft(db: D1Database, items: ClientItem[]): Promise<void> {
-  const insert = db.prepare("INSERT INTO homepage_clients (state, name, logo_key, sort_order) VALUES ('draft', ?, ?, ?)")
+  const insert = db.prepare(
+    "INSERT INTO homepage_clients (state, name, logo_key, logo_mono, title, bullets, images, sort_order) VALUES ('draft', ?, ?, ?, ?, ?, ?, ?)",
+  )
   await db.batch([
     db.prepare("DELETE FROM homepage_clients WHERE state = 'draft'"),
-    ...items.map((c, i) => insert.bind(c.name, c.logoKey, i)),
+    ...items.map((c, i) =>
+      insert.bind(c.name, c.logoKey, c.logoMono ? 1 : 0, c.title, JSON.stringify(c.bullets), JSON.stringify(c.images), i),
+    ),
   ])
 }
 
-/** Every client logo key in use by the draft or the published copy. */
-export async function clientLogoKeysInUse(db: D1Database): Promise<Set<string>> {
-  const { results } = await db.prepare('SELECT DISTINCT logo_key AS k FROM homepage_clients WHERE logo_key IS NOT NULL').all<{ k: string }>()
-  return new Set(results.map((r) => r.k))
+/** Every client logo and photo key in use by the draft or the published copy. */
+export async function clientMediaKeysInUse(db: D1Database): Promise<Set<string>> {
+  const { results } = await db.prepare('SELECT logo_key, images FROM homepage_clients').all<{ logo_key: string | null; images: string }>()
+  const keys = new Set<string>()
+  for (const r of results) {
+    if (r.logo_key) keys.add(r.logo_key)
+    for (const img of parseJsonList<{ key?: unknown }>(r.images)) if (typeof img?.key === 'string') keys.add(img.key)
+  }
+  return keys
 }
 
 export async function saveSectionsDraft(db: D1Database, items: SectionSetting[]): Promise<void> {
@@ -183,7 +222,7 @@ const SINGLETONS = {
 const LISTS = {
   homepage_skills: ['label', 'sort_order'],
   homepage_videos: ['video_id', 'title', 'sort_order'],
-  homepage_clients: ['name', 'logo_key', 'sort_order'],
+  homepage_clients: ['name', 'logo_key', 'logo_mono', 'title', 'bullets', 'images', 'sort_order'],
   homepage_section_settings: ['section_key', 'is_visible', 'sort_order'],
 } as const
 

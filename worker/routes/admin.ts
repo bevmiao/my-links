@@ -18,7 +18,7 @@ import { clampRange, getSummary } from '../lib/analytics'
 import * as db from '../lib/db'
 import * as hp from '../lib/homepage'
 import { errorResponse, HttpError, json, readJson } from '../lib/http'
-import { isProfileImageKind, pruneClientLogos, storeUpload } from '../lib/media'
+import { isProfileImageKind, pruneClientMedia, storeUpload } from '../lib/media'
 
 type Saver = (db: D1Database, body: unknown) => Promise<Record<string, string> | null>
 
@@ -43,10 +43,10 @@ const HOMEPAGE_SAVERS: Record<string, Saver> = {
   sections: saver(validateSections, hp.saveSectionsDraft),
 }
 
-/** Remove client logos no copy of the homepage uses any more. Never fails the request. */
+/** Remove client logos and photos no copy of the homepage uses any more. Never fails the request. */
 async function pruneLogos(env: Env) {
   try {
-    await pruneClientLogos(env.IMAGES, await hp.clientLogoKeysInUse(env.DB))
+    await pruneClientMedia(env.IMAGES, await hp.clientMediaKeysInUse(env.DB))
   } catch (e) {
     console.error('client logo cleanup failed', e)
   }
@@ -90,6 +90,11 @@ export async function handleAdminApi(request: Request, env: Env, ctx: ExecutionC
   if (path === '/images/client-logo' && method === 'POST') {
     const key = await storeUpload(env.IMAGES, 'client-logo', request)
     return json({ key, url: clientLogoUrl(key) }, { status: 201 })
+  }
+  // Photos for a client's pop-up card. Same lifecycle as logos.
+  if (path === '/images/client-photo' && method === 'POST') {
+    const key = await storeUpload(env.IMAGES, 'client-photo', request)
+    return json({ key, url: `/media/${key}` }, { status: 201 })
   }
 
   const img = path.match(/^\/images\/([a-z]+)$/)
@@ -183,13 +188,20 @@ export async function handleAdminApi(request: Request, env: Env, ctx: ExecutionC
   if (path === '/homepage/clients' && method === 'PUT') {
     const result = validateClients(await readJson(request, 64 * 1024))
     if (!result.ok) return errorResponse(422, 'Please fix the highlighted fields', result.fields)
-    // Uploaded logos must really exist in R2, so a stale or made-up key can't leave a broken image.
+    // Uploaded logos and photos must really exist in R2, so a stale or made-up key can't leave a
+    // broken image.
     const missing: Record<string, string> = {}
+    const exists = (key: string) => env.IMAGES.head(key).then((o) => o !== null)
     await Promise.all(
-      result.value.map(async (c, i) => {
-        if (c.logoKey && CLIENT_LOGO_KEY.test(c.logoKey) && !(await env.IMAGES.head(c.logoKey)))
-          missing[`items.${i}.logoKey`] = 'That logo is missing. Upload it again.'
-      }),
+      result.value.flatMap((c, i) => [
+        (async () => {
+          if (c.logoKey && CLIENT_LOGO_KEY.test(c.logoKey) && !(await exists(c.logoKey)))
+            missing[`items.${i}.logoKey`] = 'That logo is missing. Upload it again.'
+        })(),
+        ...c.images.map(async (img, j) => {
+          if (!(await exists(img.key))) missing[`items.${i}.images.${j}.key`] = 'That photo is missing. Upload it again.'
+        }),
+      ]),
     )
     if (Object.keys(missing).length) return errorResponse(422, 'Please fix the highlighted fields', missing)
     await hp.saveClientsDraft(env.DB, result.value)

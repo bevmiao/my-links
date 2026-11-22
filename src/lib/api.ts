@@ -71,6 +71,12 @@ export const adminApi = {
     form.append('file', file)
     return request<{ key: string; url: string }>('/api/admin/images/client-logo', { method: 'POST', body: form })
   },
+  /** Store a photo for a client's pop-up card. Same lifecycle as logos. */
+  uploadClientPhoto: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<{ key: string; url: string }>('/api/admin/images/client-photo', { method: 'POST', body: form })
+  },
   removeImage: (kind: ProfileImageKind) => request<Profile>(`/api/admin/images/${kind}`, { method: 'DELETE' }),
   listLinks: () => request<Link[]>('/api/admin/links'),
   createLink: (input: LinkInput) => request<Link>('/api/admin/links', { method: 'POST', body: json(input) }),

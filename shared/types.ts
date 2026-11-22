@@ -125,19 +125,36 @@ export interface VideoItem {
   title: string
 }
 
+/** A photo in a client's pop-up card. `key` is an R2 key under client-photo/. */
+export interface ClientImage {
+  key: string
+  /** Describes the photo for screen readers. Optional; a generic description is used if empty. */
+  alt: string
+}
+
 /**
  * A client in the logo strip. `logoKey` is an R2 key under client-logo/ (an uploaded logo), a
  * bundled placeholder (placeholder/client-N.png), or null for a text-only name.
+ * Clients with a title, bullets or images open into a pop-up card.
  */
 export interface ClientItem {
   name: string
   logoKey: string | null
+  /** Draw the logo in one colour that follows the light/dark theme (needs a transparent background). */
+  logoMono: boolean
+  title: string
+  bullets: string[]
+  images: ClientImage[]
 }
 
-/** Public shape of a client: the logo's URL instead of its storage key. */
+/** Public shape of a client: URLs instead of storage keys. */
 export interface PublicClient {
   name: string
   logoUrl: string | null
+  logoMono: boolean
+  title: string
+  bullets: string[]
+  images: { url: string; alt: string }[]
 }
 
 export interface SectionSetting {

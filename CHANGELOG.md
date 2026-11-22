@@ -4,6 +4,11 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Changed (client strip, round 2)
+- "Worked with" shows just the logos now, no white tiles. Each logo can be shown in one colour that follows light and dark mode (on by default; needs a transparent background), or in its own colours.
+- Clients can open into a pop-up card that grows out of the logo: a title, bullet points on what you worked on, and up to four photos with descriptions. Clients without details stay plain logos. Migration `0009` adds the fields; photos are stored in R2 under `client-photo/` with the same checks as other uploads (PNG, JPEG or WebP, resized in the browser, 3 MB limit). Two placeholder clients got sample text.
+- The story pop-up and the client card share one pop-up component (`PopCard`).
+
 ### Added (pass 4: clients, share preview, QR)
 - "Worked with" client strip (migration `0008`): a row of client logos under your links on Home. In the Homepage tab you can add clients, rename them, upload or replace a logo, switch a client to name only, reorder, and remove. Names are the logos' alt text, and clients without a logo show their name. Logos are stored in R2 under `client-logo/` with the same server checks as photos (real type from the file's bytes, size limit), limited to PNG, JPEG and WebP up to 1 MB; no GIF or SVG. Unused logos are cleaned up automatically. Starts hidden, with five placeholder clients in the draft (four placeholder logos, one name only) until you add real ones.
 - Share preview: pasting your link into a text, Instagram, Slack and similar shows your photo, name, and a short tagline (your published line under the name, or your bio). Adds `og:site_name`, `og:image:alt`, `profile:username`, and full Twitter card tags. Preview URLs and the image always use the real public address, and only published content is used.

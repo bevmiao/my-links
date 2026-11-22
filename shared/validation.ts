@@ -23,12 +23,13 @@ export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number]
 /**
  * Upload rules per kind of image. `types` is checked against the real type found in the file's
  * magic bytes, never the declared one. SVG is never accepted (it can carry script).
- * Client logos are stored under client-logo/ and take no GIFs.
+ * Client logos (client-logo/) and client photos (client-photo/) take no GIFs.
  */
 export const IMAGE_RULES = {
   avatar: { maxBytes: 2 * 1024 * 1024, label: '2 MB', types: ALLOWED_IMAGE_TYPES },
   background: { maxBytes: 5 * 1024 * 1024, label: '5 MB', types: ALLOWED_IMAGE_TYPES },
   'client-logo': { maxBytes: 1024 * 1024, label: '1 MB', types: ['image/png', 'image/jpeg', 'image/webp'] },
+  'client-photo': { maxBytes: 3 * 1024 * 1024, label: '3 MB', types: ['image/png', 'image/jpeg', 'image/webp'] },
 } as const satisfies Record<string, { maxBytes: number; label: string; types: readonly AllowedImageType[] }>
 export type ImageKind = keyof typeof IMAGE_RULES
 /** Images that belong to the profile (one each, stored on the profile row). */

@@ -34,6 +34,11 @@ export const HOMEPAGE_LIMITS = {
   videos: 12,
   clientName: 60,
   clients: 24,
+  clientTitle: 100,
+  clientBullet: 160,
+  clientBullets: 8,
+  clientImages: 4,
+  clientImageAlt: 150,
 } as const
 
 /** Headings as visitors see them. The one-sentence section has no heading on the public page. */
@@ -184,6 +189,8 @@ export function validateVideos(body: unknown): ValidationResult<VideoItem[]> {
 
 /** An uploaded client logo in R2. Only keys the Worker generated look like this. */
 export const CLIENT_LOGO_KEY = /^client-logo\/[0-9a-f-]{36}\.(png|jpg|webp)$/
+/** An uploaded photo for a client's pop-up card. */
+export const CLIENT_PHOTO_KEY = /^client-photo\/[0-9a-f-]{36}\.(png|jpg|webp)$/
 /** Placeholder logos bundled with the site (public/placeholders/), used until real ones are uploaded. */
 export const PLACEHOLDER_LOGO_KEY = /^placeholder\/client-[1-4]\.png$/
 
@@ -206,9 +213,26 @@ export function validateClients(body: unknown): ValidationResult<ClientItem[]> {
       if (CLIENT_LOGO_KEY.test(key) || PLACEHOLDER_LOGO_KEY.test(key)) logoKey = key
       else f[`items.${i}.logoKey`] = 'That logo isn’t one of your uploads. Upload it again.'
     }
-    return { name, logoKey }
+    const p = `items.${i}`
+    const title = text(it.title, L.clientTitle, `${p}.title`, f)
+    const bullets = list(it.bullets ?? [], L.clientBullets, `${p}.bullets`, f)
+      .map((b, j) => text(b, L.clientBullet, `${p}.bullets.${j}`, f))
+      .filter(Boolean) // empty bullets are simply dropped
+    const images = list(it.images ?? [], L.clientImages, `${p}.images`, f).map((img, j) => {
+      const im = (img ?? {}) as Record<string, unknown>
+      const key = str(im.key)
+      if (!CLIENT_PHOTO_KEY.test(key)) f[`${p}.images.${j}.key`] = 'That photo isn’t one of your uploads. Upload it again.'
+      return { key, alt: text(im.alt, L.clientImageAlt, `${p}.images.${j}.alt`, f) }
+    })
+    if (it.logoMono !== undefined && typeof it.logoMono !== 'boolean') f[`${p}.logoMono`] = 'Must be true or false.'
+    return { name, logoKey, logoMono: it.logoMono === undefined ? true : (it.logoMono as boolean), title, bullets, images }
   })
   return done(f, items)
+}
+
+/** A client opens into a pop-up card only when there's something to show in it. */
+export function clientHasDetails(c: { title: string; bullets: readonly unknown[]; images: readonly unknown[] }): boolean {
+  return !!(c.title || c.bullets.length || c.images.length)
 }
 
 /** The one-sentence "what I'm up for" line. */
@@ -299,7 +323,14 @@ export function toPublicHomepage(content: HomepageContent): PublicHomepage {
       case 'clients':
         if (content.clients.length) {
           // Only the name and the logo's URL go public; storage keys stay private.
-          const items: PublicClient[] = content.clients.map((c) => ({ name: c.name, logoUrl: clientLogoUrl(c.logoKey) }))
+          const items: PublicClient[] = content.clients.map((c) => ({
+            name: c.name,
+            logoUrl: clientLogoUrl(c.logoKey),
+            logoMono: c.logoMono,
+            title: c.title,
+            bullets: c.bullets,
+            images: c.images.map((img) => ({ url: `/media/${img.key}`, alt: img.alt })),
+          }))
           sections.push({ key, items })
         }
         break

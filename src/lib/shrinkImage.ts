@@ -11,7 +11,7 @@
  *
  * The server still re-validates every upload (size and real file type).
  */
-export const SHRINK_MAX_SIDE = { avatar: 800, background: 2400, 'client-logo': 600 } as const
+export const SHRINK_MAX_SIDE = { avatar: 800, background: 2400, 'client-logo': 600, 'client-photo': 1600 } as const
 
 /** Larger than this, we don't even try to decode (protects the browser tab). */
 export const MAX_INPUT_BYTES = 40 * 1024 * 1024

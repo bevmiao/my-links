@@ -10,31 +10,33 @@ const EXT: Record<string, string> = {
 }
 
 /** Only keys this Worker generates can be served — no arbitrary bucket reads. */
-export const MEDIA_KEY = /^((avatar|background)\/[0-9a-f-]{36}\.(png|jpg|webp|gif)|client-logo\/[0-9a-f-]{36}\.(png|jpg|webp))$/
+export const MEDIA_KEY = /^((avatar|background)\/[0-9a-f-]{36}\.(png|jpg|webp|gif)|client-(logo|photo)\/[0-9a-f-]{36}\.(png|jpg|webp))$/
 
 export function isProfileImageKind(v: string): v is ProfileImageKind {
   return v === 'avatar' || v === 'background'
 }
 
-/** Uploaded client logos that nothing uses are kept this long, so a fresh upload can be saved first. */
+/** Uploaded client logos and photos that nothing uses are kept this long, so a fresh upload can be saved first. */
 const ORPHAN_GRACE_MS = 60 * 60 * 1000
 
 /**
- * Delete client logos in R2 that neither the draft nor the published homepage uses (removed or
- * replaced logos, and uploads that were never saved). Recent uploads are left alone.
+ * Delete client logos and photos in R2 that neither the draft nor the published homepage uses
+ * (removed or replaced ones, and uploads that were never saved). Recent uploads are left alone.
  */
-export async function pruneClientLogos(bucket: R2Bucket, inUse: Set<string>, now = Date.now()): Promise<number> {
+export async function pruneClientMedia(bucket: R2Bucket, inUse: Set<string>, now = Date.now()): Promise<number> {
   let removed = 0
-  let cursor: string | undefined
-  do {
-    const page = await bucket.list({ prefix: 'client-logo/', cursor })
-    const stale = page.objects.filter((o) => !inUse.has(o.key) && now - o.uploaded.getTime() > ORPHAN_GRACE_MS).map((o) => o.key)
-    if (stale.length) {
-      await bucket.delete(stale)
-      removed += stale.length
-    }
-    cursor = page.truncated ? page.cursor : undefined
-  } while (cursor)
+  for (const prefix of ['client-logo/', 'client-photo/']) {
+    let cursor: string | undefined
+    do {
+      const page = await bucket.list({ prefix, cursor })
+      const stale = page.objects.filter((o) => !inUse.has(o.key) && now - o.uploaded.getTime() > ORPHAN_GRACE_MS).map((o) => o.key)
+      if (stale.length) {
+        await bucket.delete(stale)
+        removed += stale.length
+      }
+      cursor = page.truncated ? page.cursor : undefined
+    } while (cursor)
+  }
   return removed
 }
 
