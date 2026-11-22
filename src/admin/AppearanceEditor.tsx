@@ -1,12 +1,13 @@
-import { Check, Monitor, Moon, Sun } from 'lucide-react'
+import { Check, Coffee, Monitor, Moon, Sun } from 'lucide-react'
 import type { ButtonStyle, Profile, ThemeMode } from '../../shared/types'
+import { COZY_PRESET } from '../lib/theme'
 import { ImageUploader } from './ImageUploader'
 import { PageTitle } from './ProfileEditor'
 import { Card, ColorInput, cx, Field } from './ui'
 
-const ACCENTS = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#10b981', '#06b6d4', '#3b82f6', '#18181b']
-const LIGHT_BGS = ['#ffffff', '#fafafa', '#f5f5f4', '#fdf8f3', '#f0f4ff', '#f3faf7']
-const DARK_BGS = ['#09090b', '#0a0a0a', '#111113', '#0c0a14', '#0a1210', '#14100c']
+const ACCENTS = ['#c06a3c', '#b08a4e', '#7c8b5a', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#10b981', '#06b6d4', '#3b82f6', '#18181b']
+const LIGHT_BGS = ['#f6efe5', '#ffffff', '#fafafa', '#f5f5f4', '#fdf8f3', '#f0f4ff', '#f3faf7']
+const DARK_BGS = ['#16120f', '#09090b', '#0a0a0a', '#111113', '#0c0a14', '#0a1210', '#14100c']
 
 const MODES: { value: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', Icon: Sun },
@@ -55,7 +56,24 @@ export function AppearanceEditor({ draft, onChange, errors, onImageUpdated }: Pr
         </div>
       </Card>
 
-      <Card title="Colours">
+      <Card
+        title="Colours"
+        actions={
+          <button
+            type="button"
+            onClick={() => onChange({ ...COZY_PRESET })}
+            className="inline-flex h-8 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-[13px] font-medium shadow-xs transition hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+          >
+            <span className="flex -space-x-1" aria-hidden="true">
+              {[COZY_PRESET.accentColor, COZY_PRESET.backgroundLight, COZY_PRESET.backgroundDark].map((c) => (
+                <span key={c} className="size-3.5 rounded-full border border-black/10 dark:border-white/15" style={{ background: c }} />
+              ))}
+            </span>
+            <Coffee size={14} aria-hidden="true" />
+            Use “Cozy film” colours
+          </button>
+        }
+      >
         <div className="space-y-6">
           <Field label="Accent colour" htmlFor="accent" error={errors.accentColor} hint="Used for highlights, icons and hover states.">
             <div className="space-y-3">

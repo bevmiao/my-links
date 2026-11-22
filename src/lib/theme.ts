@@ -79,10 +79,40 @@ export function isDarkColor(hex: string) {
   return luminance(hex) < 0.22
 }
 
-/** Readable text colour (near-black or near-white) on top of `hex`. */
+/** Readable text colour on top of `hex`: whichever of near-black or white has more contrast. */
 export function onColor(hex: string) {
-  return luminance(hex) > 0.45 ? '#0a0a0a' : '#ffffff'
+  const l = luminance(hex)
+  const onWhite = 1.05 / (l + 0.05)
+  const onBlack = (l + 0.05) / (luminance('#0a0a0a') + 0.05)
+  return onBlack > onWhite ? '#0a0a0a' : '#ffffff'
 }
+
+function contrast(a: string, b: string) {
+  const [x, y] = [luminance(a), luminance(b)]
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05)
+}
+
+function mix(hex: string, toward: [number, number, number], t: number) {
+  const c = hexToRgb(hex).map((v, i) => Math.round(v + (toward[i] - v) * t))
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
+ * The accent, nudged lighter (on dark backgrounds) or darker (on light ones) until it reaches
+ * `min` contrast against `bg`. Used for accent-coloured text and icons, so any accent the owner
+ * picks stays readable (WCAG AA 4.5:1) in both themes. Decorative fills keep the raw accent.
+ */
+export function readableAccent(accent: string, bg: string, min = 4.5) {
+  const toward: [number, number, number] = isDarkColor(bg) ? [255, 255, 255] : [0, 0, 0]
+  for (let t = 0; t <= 1; t += 0.05) {
+    const c = mix(accent, toward, t)
+    if (contrast(c, bg) >= min) return c
+  }
+  return isDarkColor(bg) ? '#ffffff' : '#000000'
+}
+
+/** Warm "cozy film" palette offered as a one-click preset in Appearance. */
+export const COZY_PRESET = { accentColor: '#c06a3c', backgroundLight: '#f6efe5', backgroundDark: '#16120f' } as const
 
 /**
  * CSS custom properties consumed by ProfileView. Derived from the owner's chosen colours so
@@ -94,6 +124,7 @@ export function profilePalette(profile: Pick<Profile, 'accentColor' | 'backgroun
   return {
     '--p-bg': bg,
     '--p-accent': profile.accentColor,
+    '--p-accent-text': readableAccent(profile.accentColor, bg),
     '--p-on-accent': onColor(profile.accentColor),
     '--p-fg': darkSurface ? '#f4f4f5' : '#0a0a0a',
     '--p-muted': darkSurface ? 'rgba(244,244,245,0.62)' : 'rgba(10,10,10,0.56)',
@@ -102,5 +133,7 @@ export function profilePalette(profile: Pick<Profile, 'accentColor' | 'backgroun
     '--p-border': darkSurface ? 'rgba(255,255,255,0.09)' : 'rgba(10,10,10,0.08)',
     '--p-shadow': darkSurface ? '0 1px 0 rgba(255,255,255,0.04) inset' : '0 1px 2px rgba(10,10,10,0.04)',
     '--p-grain-opacity': darkSurface ? '0.15' : '0.11',
+    // Soft film vignette at the edges: a little darker in dark mode, a faint warm tone in light mode.
+    '--p-vignette': darkSurface ? 'rgba(0,0,0,0.38)' : 'rgba(120,84,48,0.10)',
   } as CSSProperties
 }

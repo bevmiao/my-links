@@ -78,6 +78,12 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pag
         className="pointer-events-none absolute top-[40%] -right-48 -z-10 size-[460px] animate-drift rounded-full blur-3xl [animation-delay:-9s]"
         style={{ background: `color-mix(in srgb, var(--p-accent) ${glowStrength - 10}%, transparent)` }}
       />
+      {/* Film vignette: softly darker (or warmer, in light mode) towards the edges. */}
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none inset-0 -z-10 ${preview ? 'absolute' : 'fixed'}`}
+        style={{ background: 'radial-gradient(ellipse 85% 75% at 50% 45%, transparent 55%, var(--p-vignette))' }}
+      />
       <div aria-hidden="true" className={`grain z-50 ${preview ? 'absolute' : 'fixed'} animate-grain`} />
 
       <header className={`mx-auto flex w-full max-w-(--p-wide-width) items-center justify-between ${preview ? 'p-3' : 'p-4 sm:p-6'}`}>
@@ -137,7 +143,7 @@ function FullHero({ profile, headline, preview }: { profile: Profile; headline: 
   return (
     <section className="flex w-full animate-fade-up flex-col items-center text-center @4xl:items-start @4xl:text-left">
       <LivelyAvatar src={profile.avatarUrl} name={profile.displayName} size={preview ? 88 : 112} />
-      <h1 className={`mt-6 font-semibold tracking-tight text-balance ${preview ? 'text-xl' : 'text-2xl sm:text-[28px] @4xl:text-[32px]'}`}>
+      <h1 className={`mt-6 font-display font-medium text-balance ${preview ? 'text-2xl' : 'text-3xl sm:text-[34px] @4xl:text-[40px] @4xl:leading-tight'}`}>
         {profile.displayName}
       </h1>
       {headline ? (
@@ -145,7 +151,7 @@ function FullHero({ profile, headline, preview }: { profile: Profile; headline: 
       ) : null}
       <p className="mt-1 text-sm font-medium text-(--p-muted)">@{profile.username}</p>
       {profile.bio ? (
-        <p className={`mt-4 max-w-md whitespace-pre-line text-pretty text-(--p-fg)/85 ${preview ? 'text-sm' : 'text-[15px] leading-relaxed'}`}>
+        <p className={`mt-4 max-w-md whitespace-pre-line text-pretty text-(--p-fg)/85 ${preview ? 'text-sm' : 'text-(length:--p-text-body) leading-relaxed'}`}>
           {profile.bio}
         </p>
       ) : null}
@@ -162,7 +168,7 @@ function CompactHero({ profile, headline }: { profile: Profile; headline: string
     <div className="mb-6 flex animate-fade-up items-center gap-3.5 @4xl:hidden">
       <Avatar src={profile.avatarUrl} name={profile.displayName} size={52} />
       <div className="min-w-0">
-        <p className="truncate text-lg font-semibold tracking-tight">{profile.displayName}</p>
+        <p className="truncate font-display text-xl font-medium">{profile.displayName}</p>
         {headline ? <p className="truncate text-(length:--p-text-small) text-(--p-muted)">{headline}</p> : null}
       </div>
     </div>
@@ -258,11 +264,11 @@ function NothingHere({ preview, onNavigate }: { preview?: boolean; onNavigate?: 
     <div className="py-10 text-center @4xl:text-left">
       <p className="text-(--p-muted)">Nothing here yet.</p>
       {preview || onNavigate ? (
-        <button type="button" onClick={() => onNavigate?.('home')} className="mt-2 font-medium text-(--p-accent)">
+        <button type="button" onClick={() => onNavigate?.('home')} className="mt-2 font-medium text-(--p-accent-text)">
           Back home
         </button>
       ) : (
-        <RouterLink href="/" className="mt-2 inline-block font-medium text-(--p-accent)">
+        <RouterLink href="/" className="mt-2 inline-block font-medium text-(--p-accent-text)">
           Back home
         </RouterLink>
       )}

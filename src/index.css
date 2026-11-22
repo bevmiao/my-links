@@ -5,6 +5,12 @@
 
 @theme {
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /*
+   * Warm serif for names and headings (the "cozy but professional" voice). Uses serifs already on
+   * visitors' devices (Iowan on Apple, Palatino/Book Antiqua on Windows, Georgia everywhere), so
+   * no font download and no new dependency. Body text stays Inter for readability.
+   */
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, ui-serif, serif;
   --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-fade-in: fade-in 0.2s ease-out both;
   --animate-pop-in: pop-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -126,16 +132,17 @@
   --p-wide-width: 1120px;
   --p-side-width: 320px;
   --p-grain-size: 180px;
-  --p-radius-card: 1rem;
-  --p-radius-inner: 0.75rem;
+  --p-radius-card: 1.25rem;
+  --p-radius-inner: 0.875rem;
   --p-radius-chip: 9999px;
-  --p-section-gap: 2.5rem;
+  --p-section-gap: 3rem;
   --p-card-padding: 1.25rem;
   --p-text-heading: 0.75rem;
-  --p-text-title: 0.9375rem;
-  --p-text-body: 0.9375rem;
-  --p-text-small: 0.8125rem;
-  --p-leading-body: 1.65;
+  --p-text-title: 1.375rem; /* section headings, set in the display serif */
+  --p-text-body: 1rem; /* 16px minimum for body text on phones */
+  --p-text-small: 0.875rem;
+  --p-leading-body: 1.7;
+  --p-measure: 65ch; /* comfortable line length for paragraphs */
 }
 
 @layer base {
@@ -156,8 +163,14 @@
     background: color-mix(in srgb, var(--p-accent, #6366f1) 25%, transparent);
   }
   :focus-visible {
-    outline: 2px solid var(--p-accent, #6366f1);
+    outline: 2px solid var(--p-accent-text, var(--p-accent, #6366f1));
     outline-offset: 2px;
+  }
+  /* Tailwind v4 resets buttons to the default cursor; anything clickable should show a pointer. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  summary {
+    cursor: pointer;
   }
 }
 

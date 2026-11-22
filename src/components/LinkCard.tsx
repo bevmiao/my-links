@@ -37,18 +37,18 @@ export function LinkCard({ link, buttonStyle, preview, index = 0 }: LinkCardProp
         className={`grid size-10 shrink-0 place-items-center transition duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:scale-110 group-hover:-rotate-6 ${pill ? 'rounded-full' : buttonStyle === 'square' ? 'rounded' : 'rounded-xl'}`}
         style={{
           background: icon ? 'color-mix(in srgb, var(--p-accent) 12%, transparent)' : 'transparent',
-          color: 'var(--p-accent)',
+          color: 'var(--p-accent-text)',
         }}
       >
         {icon ? <icon.Icon size={19} /> : null}
       </span>
       <span className="min-w-0 flex-1 text-center">
-        <span className="block truncate text-[15px] font-medium tracking-tight text-(--p-fg)">{link.title}</span>
+        <span className="block truncate text-base font-medium tracking-tight text-(--p-fg)">{link.title}</span>
         {link.description ? (
-          <span className="mt-0.5 block truncate text-[13px] text-(--p-muted)">{link.description}</span>
+          <span className="mt-0.5 block truncate text-(length:--p-text-small) text-(--p-muted)">{link.description}</span>
         ) : null}
       </span>
-      <span className="grid size-10 shrink-0 place-items-center text-(--p-muted) opacity-0 transition duration-300 group-hover:translate-x-0.5 group-hover:text-(--p-accent) group-hover:opacity-100 group-focus-visible:opacity-100">
+      <span className="grid size-10 shrink-0 place-items-center text-(--p-muted) opacity-0 transition duration-300 group-hover:translate-x-0.5 group-hover:text-(--p-accent-text) group-hover:opacity-100 group-focus-visible:opacity-100">
         <ArrowUpRight size={18} aria-hidden="true" />
       </span>
     </a>

@@ -51,7 +51,7 @@ export function StoryDialog({
           />
           <div className="relative p-6">
             <div className="flex items-start justify-between gap-4">
-              <p className="inline-flex items-center gap-1.5 text-(length:--p-text-small) font-medium text-(--p-accent)">
+              <p className="inline-flex items-center gap-1.5 text-(length:--p-text-small) font-medium text-(--p-accent-text)">
                 <MapPin size={15} aria-hidden="true" />
                 {location}
               </p>
@@ -64,7 +64,7 @@ export function StoryDialog({
                 <X size={18} />
               </button>
             </div>
-            <h2 id={titleId} className="mt-2 text-xl font-semibold tracking-tight text-balance">
+            <h2 id={titleId} className="mt-2 font-display text-2xl font-medium text-balance">
               {story.title || SECTION_LABELS.story}
             </h2>
             <p className="mt-3 text-(length:--p-text-body) leading-(--p-leading-body) whitespace-pre-line text-pretty text-(--p-fg)/85">

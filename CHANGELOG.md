@@ -4,6 +4,13 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Changed (pass 3: professional and cozy)
+- Warm serif for the name and headings (system serifs, no download) with Inter for body text. Body text is now 16px with a comfortable line length. Softer corners and more space between sections.
+- "Let's work!" uses an italic accent, and the one-sentence line is set in italic serif.
+- A soft film vignette joins the grain.
+- Appearance: a one-click "Cozy film" colour preset (terracotta, cream, espresso) and warm swatches.
+- Accessibility: accent-coloured text and icons are automatically adjusted to readable contrast in both themes, text on the accent picks black or white by contrast, buttons show a pointer cursor, and focus rings use the readable accent.
+
 ### Added (pass 2)
 - Separate pages: Home (`/`), About (`/about`), and Work (`/work`), with an animated tab bar. Each page is served with embedded data, its own title, and its own canonical URL.
 - Wider layout on computers: two columns with your photo, name, and icons pinned on the left. Phones keep one column. Layout follows the page's own width (container queries), so the dashboard preview shows the phone version.

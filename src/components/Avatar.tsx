@@ -27,7 +27,7 @@ export function Avatar({ src, name, size = 96 }: AvatarProps) {
             className="grid h-full w-full place-items-center rounded-full font-semibold tracking-tight"
             style={{
               background: 'color-mix(in srgb, var(--p-accent) 16%, var(--p-bg))',
-              color: 'var(--p-accent)',
+              color: 'var(--p-accent-text)',
               fontSize: size * 0.34,
             }}
             aria-label={name}

@@ -103,6 +103,17 @@ Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds th
 
 ## 9. Design direction
 
+**Current direction (pass 3, owner request: "professional and cozy"), chosen with the UI/UX Pro Max skill:**
+
+- Type: a warm serif for the name, headings, and the one-sentence line (`--font-display`: Iowan Old Style / Palatino / Georgia, all already on visitors' devices, so no download), with Inter for body text. Body text is 16px with a 65-character line length.
+- Colour: an optional "Cozy film" preset in Appearance (terracotta `#c06a3c`, cream `#f6efe5`, espresso `#16120f`). The owner's own colours still rule. Accent text and icons are automatically adjusted to 4.5:1 contrast against the background (`readableAccent()`), and text on accent fills uses whichever of black or white reads better.
+- Texture and mood: film grain, a soft vignette, drifting warm light, softer corners, more breathing room between sections, and an editorial italic accent ("Let's *work!*").
+- Checks applied: pointer cursor on everything clickable, visible focus rings in the readable accent, 44px tap targets, alt text and accessible names, no sideways scrolling, reduced-motion respected.
+- Possible upgrade (needs owner approval to add a dependency): self-host a dedicated serif such as Newsreader so headings look identical on every device.
+
+Earlier guidance:
+
+
 Modern, polished, professional. Strong typography, clear hierarchy, generous spacing, consistent components, high-quality imagery, fast load, accessibility, and mobile first. It should feel like a personal digital headquarters, not a generic link-in-bio template. Avoid clutter and unnecessary features. Part Two (premium Apple-style minimalism) is deferred.
 
 ## 10. User experience requirements
