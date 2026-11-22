@@ -4,6 +4,13 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Added (Part One finish)
+- YouTube videos (migration `0007`): a "Videos" section on the Work page. Paste a YouTube link in the Homepage editor, give it a title, reorder or remove. Visitors see a thumbnail; the player (privacy-enhanced youtube-nocookie.com) loads and plays only when they tap. Up to 12 videos. Starts hidden until turned on in Sections.
+- Security: CSP now allows `frame-src https://www.youtube-nocookie.com` and thumbnails from `https://i.ytimg.com`, nothing else.
+
+### Changed (Part One finish)
+- Background photos keep their real colours: when a background photo is set, the accent-coloured glows are skipped, the colour wash is lighter (60% instead of 80%), and the edge shading is neutral instead of warm.
+
 ### Added (pass 3b)
 - Any size photo can be uploaded: the dashboard resizes profile photos (800 px) and backgrounds (2400 px) in the browser and saves them as WebP before upload. Pages load faster, and the 2 MB / 5 MB server limits stay as a safety net. GIFs are not resized.
 - Position your profile photo: after choosing a photo, a "Position your photo" window lets you drag it and zoom so the right part sits in the circle (also works with arrow keys and +/-). "Adjust position" reopens it on the current photo. Saves an 800 px square; no database change. GIFs skip this step so animation is kept.

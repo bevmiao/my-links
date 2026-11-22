@@ -16,7 +16,10 @@ afterAll(() => restoreFetch())
 const getState = async () => (await (await adminCall(token, '/api/admin/homepage')).json()) as HomepageAdminState
 const publicData = async () => (await (await call(`${PUBLIC}/api/profile`)).json()) as PublicPageData
 const put = (section: string, json: unknown) => adminCall(token, `/api/admin/homepage/${section}`, { method: 'PUT', json })
-const ALL_KEYS = ['intro', 'story', 'skills', 'opportunities', 'contact', 'testimonials']
+/** Sections with stored settings from earlier migrations, in their stored order. */
+const STORED_KEYS = ['intro', 'story', 'skills', 'opportunities', 'contact', 'testimonials']
+/** Every section. 'videos' (0007) has no stored row yet, so it is added at the end, hidden. */
+const ALL_KEYS = [...STORED_KEYS, 'videos']
 
 // Tests in this file run in order and share one isolated database.
 describe('homepage draft / publish', () => {
@@ -32,6 +35,8 @@ describe('homepage draft / publish', () => {
     expect(s.draft.story).toMatchObject({ title: 'Where I grew up', body: expect.stringMatching(/^Placeholder/) })
     // Experience was removed; its stored section row is ignored.
     expect(s.draft.sections.map((x) => x.key)).toEqual(ALL_KEYS)
+    expect(s.draft.sections.find((x) => x.key === 'videos')?.visible).toBe(false)
+    expect(s.draft.videos).toEqual([])
 
     // Placeholder drafts are not public.
     expect((await publicData()).homepage).toBeNull()
@@ -52,6 +57,10 @@ describe('homepage draft / publish', () => {
     expect((await put('sections', { items: [{ key: 'intro', visible: true }] })).status).toBe(422) // must list every section
     expect((await put('sections', { items: [...ALL_KEYS, 'experience'].map((key) => ({ key, visible: true })) })).status).toBe(422)
     expect((await put('experience', { items: [] })).status).toBe(404) // removed section
+    expect((await put('videos', { items: [{ videoId: 'not-an-id', title: 'x' }] })).status).toBe(422)
+    expect((await put('videos', { items: [{ videoId: 'dQw4w9WgXcQ', title: '' }] })).status).toBe(422) // title required
+    expect((await put('videos', { items: [{ videoId: '"><script>x', title: 'x' }] })).status).toBe(422)
+    expect((await put('videos', { items: Array.from({ length: 13 }, () => ({ videoId: 'dQw4w9WgXcQ', title: 'x' })) })).status).toBe(422)
     expect((await put('constructor', {})).status).toBe(404) // no prototype lookups
     expect((await put('toString', {})).status).toBe(404)
   })
@@ -86,7 +95,7 @@ describe('homepage draft / publish', () => {
     expect(state.publishedAt).toMatch(/Z$/)
 
     const home = (await publicData()).homepage!
-    expect(home.sections.map((s) => s.key)).toEqual(ALL_KEYS)
+    expect(home.sections.map((s) => s.key)).toEqual(STORED_KEYS) // videos: hidden and empty
     expect(home.sections.find((s) => s.key === 'intro')).toEqual({ key: 'intro', intro })
     expect(home.sections.find((s) => s.key === 'opportunities')).toEqual({ key: 'opportunities', sentence: 'Up for coffee.' })
     expect(home.sections.find((s) => s.key === 'contact')).toEqual({
@@ -116,8 +125,8 @@ describe('homepage draft / publish', () => {
   })
 
   it('omits hidden sections from the public data completely', async () => {
-    const order = ['contact', 'intro', 'story', 'skills', 'opportunities', 'testimonials']
-    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' && key !== 'story' })) })
+    const order = ['contact', 'intro', 'story', 'skills', 'opportunities', 'testimonials', 'videos']
+    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' && key !== 'story' && key !== 'videos' })) })
     await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
     const home = (await publicData()).homepage!
     expect(home.sections.map((s) => s.key)).toEqual(['contact', 'intro', 'opportunities', 'testimonials'])
@@ -125,6 +134,29 @@ describe('homepage draft / publish', () => {
     // A hidden story must not leak through the location pop-up either.
     expect(home.sections.find((s) => s.key === 'contact')).toMatchObject({ story: null })
     expect(JSON.stringify(home)).not.toContain('Alhambra')
+  })
+
+  it('adds YouTube videos as a Work section, private until published', async () => {
+    const videos = [
+      { videoId: 'dQw4w9WgXcQ', title: 'Golden hour in Pasadena' },
+      { videoId: 'aqz-KE-bpKQ', title: 'Wedding highlights' },
+    ]
+    const saved = await put('videos', { items: videos })
+    expect(saved.status).toBe(200)
+    expect(((await saved.json()) as HomepageAdminState).draft.videos).toEqual(videos)
+    const order = ['contact', 'intro', 'story', 'skills', 'opportunities', 'videos', 'testimonials']
+    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' && key !== 'story' })) })
+    expect(JSON.stringify(await publicData())).not.toContain('dQw4w9WgXcQ') // draft only
+
+    await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
+    const home = (await publicData()).homepage!
+    expect(home.sections.map((s) => s.key)).toEqual(['contact', 'intro', 'opportunities', 'videos', 'testimonials'])
+    expect(home.sections.find((s) => s.key === 'videos')).toEqual({ key: 'videos', items: videos })
+
+    // Hiding the section removes the videos from the public data entirely.
+    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'videos' })) })
+    await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
+    expect(JSON.stringify(await publicData())).not.toContain('dQw4w9WgXcQ')
   })
 
   it('publishes atomically: every table in use matches the draft afterwards', async () => {
@@ -135,6 +167,7 @@ describe('homepage draft / publish', () => {
       'SELECT sentence FROM homepage_open_to WHERE state = ?',
       'SELECT title, body FROM homepage_story WHERE state = ?',
       'SELECT label, sort_order FROM homepage_skills WHERE state = ? ORDER BY sort_order',
+      'SELECT video_id, title, sort_order FROM homepage_videos WHERE state = ? ORDER BY sort_order',
       'SELECT section_key, is_visible, sort_order FROM homepage_section_settings WHERE state = ? ORDER BY sort_order',
     ]
     for (const q of queries) expect(await rows(q, 'published')).toEqual(await rows(q, 'draft'))
@@ -157,7 +190,12 @@ describe('public pages', () => {
       expect(html).toContain('<script type="application/json" id="initial-data">')
       expect(html).toMatch(new RegExp(`<title>${label} · `))
       expect(html).toContain(`<link rel="canonical" href="${PUBLIC}${path}" />`)
-      expect(res.headers.get('Content-Security-Policy')).toContain("script-src 'self'")
+      const csp = res.headers.get('Content-Security-Policy') ?? ''
+      expect(csp).toContain("script-src 'self'")
+      // Only the privacy-enhanced YouTube player may be framed; thumbnails only from i.ytimg.com.
+      expect(csp).toContain('frame-src https://www.youtube-nocookie.com;')
+      expect(csp).toContain("img-src 'self' data: blob: https://i.ytimg.com;")
+      expect(csp).toContain("frame-ancestors 'none'")
     }
     expect(await (await call(`${PUBLIC}/`)).text()).toContain(`<link rel="canonical" href="${PUBLIC}/" />`)
   })

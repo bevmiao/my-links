@@ -90,7 +90,10 @@ export function withSecurityHeaders(res: Response, opts: { local: boolean; admin
           "default-src 'self'",
           "script-src 'self'",
           "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' data: blob:",
+          // YouTube: thumbnails from i.ytimg.com, and the privacy-enhanced player, which only
+          // loads after a visitor taps a video (src/components/VideoGrid.tsx).
+          "img-src 'self' data: blob: https://i.ytimg.com",
+          "frame-src https://www.youtube-nocookie.com",
           "font-src 'self'",
           "connect-src 'self'",
           "object-src 'none'",

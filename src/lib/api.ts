@@ -88,6 +88,7 @@ export interface HomepageSectionBody {
   skills: { items: HomepageContent['skills'] }
   'open-to': { sentence: HomepageContent['openTo'] }
   story: HomepageContent['story']
+  videos: { items: HomepageContent['videos'] }
   sections: { items: HomepageContent['sections'] }
 }
 export type HomepageSectionRoute = keyof HomepageSectionBody

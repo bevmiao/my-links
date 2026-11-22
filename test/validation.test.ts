@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { normalizeUrl, sniffImageType, validateLinkInput, validateProfileInput } from '../shared/validation'
 import { safeJsonForHtml } from '../worker/lib/html'
 import { deviceClass, referrerHost } from '../worker/lib/analytics'
+import { parseYouTubeId } from '../shared/homepage'
 
 describe('normalizeUrl', () => {
   it('accepts http(s) and mailto, adding https:// when missing', () => {
@@ -84,5 +85,39 @@ describe('helpers', () => {
     expect(referrerHost('https://www.google.com/search?q=x', ['links.example.com'])).toBe('google.com')
     expect(referrerHost('https://links.example.com/', ['links.example.com'])).toBeNull()
     expect(referrerHost('javascript:alert(1)', [])).toBeNull()
+  })
+})
+
+describe('parseYouTubeId', () => {
+  const ID = 'dQw4w9WgXcQ'
+  it('accepts the links people paste from YouTube', () => {
+    for (const input of [
+      ID,
+      `https://www.youtube.com/watch?v=${ID}`,
+      `https://youtube.com/watch?v=${ID}&t=42s`,
+      `https://m.youtube.com/watch?v=${ID}`,
+      `youtube.com/watch?v=${ID}`,
+      `https://youtu.be/${ID}?si=abc123`,
+      `https://www.youtube.com/shorts/${ID}`,
+      `https://www.youtube.com/embed/${ID}`,
+      `https://www.youtube-nocookie.com/embed/${ID}`,
+      `https://www.youtube.com/live/${ID}?feature=share`,
+      `  https://youtu.be/${ID}  `,
+    ])
+      expect(parseYouTubeId(input), input).toBe(ID)
+  })
+  it('rejects anything else', () => {
+    for (const input of [
+      '',
+      'hello',
+      `https://evil.example/watch?v=${ID}`,
+      `https://youtube.com.evil.example/watch?v=${ID}`,
+      `https://www.youtube.com/playlist?list=PL123`,
+      `https://www.youtube.com/@someone`,
+      `javascript:alert(1)//youtu.be/${ID}`,
+      `https://youtu.be/${ID}x`,
+      `https://www.youtube.com/watch?v=<script>`,
+    ])
+      expect(parseYouTubeId(input), input).toBeNull()
   })
 })

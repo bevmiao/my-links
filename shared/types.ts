@@ -70,7 +70,7 @@ export interface PublicPageData {
  * 'opportunities' is the one-sentence "what I'm up for" section (the key predates the redesign).
  * 'experience' was removed in pass 1b; any stored row for it is ignored.
  */
-export const SECTION_KEYS = ['intro', 'story', 'skills', 'opportunities', 'contact', 'testimonials'] as const
+export const SECTION_KEYS = ['intro', 'story', 'skills', 'opportunities', 'videos', 'contact', 'testimonials'] as const
 export type SectionKey = (typeof SECTION_KEYS)[number]
 
 /** Public pages. Home holds the links; homepage sections live on About and Work. */
@@ -83,6 +83,7 @@ export const SECTION_PAGE: Record<SectionKey, Exclude<PageKey, 'home'>> = {
   story: 'about',
   skills: 'about',
   opportunities: 'work',
+  videos: 'work',
   contact: 'work',
   testimonials: 'work',
 }
@@ -116,6 +117,13 @@ export interface SkillItem {
   label: string
 }
 
+/** A YouTube video. Only the ID is stored; the player loads when a visitor taps it. */
+export interface VideoItem {
+  /** The 11-character YouTube video ID. */
+  videoId: string
+  title: string
+}
+
 export interface SectionSetting {
   key: SectionKey
   visible: boolean
@@ -129,6 +137,7 @@ export interface HomepageContent {
   skills: SkillItem[]
   /** One sentence about what the owner is up for (shown in the 'opportunities' section). */
   openTo: string
+  videos: VideoItem[]
   /** Every section key exactly once, in display order. */
   sections: SectionSetting[]
 }
@@ -147,6 +156,7 @@ export type PublicSection =
   | { key: 'story'; story: HomepageStory }
   | { key: 'skills'; items: SkillItem[] }
   | { key: 'opportunities'; sentence: string }
+  | { key: 'videos'; items: VideoItem[] }
   /** `story` is set only when the story section is visible, so a hidden story never leaks through the location pop-up. */
   | { key: 'contact'; contact: HomepageContact; story: HomepageStory | null }
   | { key: 'testimonials' }

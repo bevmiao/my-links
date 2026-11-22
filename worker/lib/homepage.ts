@@ -18,6 +18,7 @@ import type {
   SectionKey,
   SectionSetting,
   SkillItem,
+  VideoItem,
 } from '../../shared/types'
 import { HttpError } from './http'
 
@@ -38,12 +39,13 @@ const toIso = (sqlTime: string) => `${sqlTime.replace(' ', 'T')}Z`
 
 /** Read one full copy of the homepage. Returns null for 'published' when nothing has been published. */
 export async function readHomepage(db: D1Database, state: State): Promise<HomepageContent | null> {
-  const [intro, story, contact, skills, openTo, sections] = await db.batch([
+  const [intro, story, contact, skills, openTo, videos, sections] = await db.batch([
     db.prepare('SELECT headline, about FROM homepage_intro WHERE state = ?').bind(state),
     db.prepare('SELECT title, body FROM homepage_story WHERE state = ?').bind(state),
     db.prepare('SELECT email, location, portfolio_url, portfolio_coming_soon FROM homepage_contact WHERE state = ?').bind(state),
     db.prepare('SELECT label FROM homepage_skills WHERE state = ? ORDER BY sort_order, id').bind(state),
     db.prepare('SELECT sentence FROM homepage_open_to WHERE state = ?').bind(state),
+    db.prepare('SELECT video_id AS videoId, title FROM homepage_videos WHERE state = ? ORDER BY sort_order, id').bind(state),
     db.prepare('SELECT section_key, is_visible FROM homepage_section_settings WHERE state = ? ORDER BY sort_order, section_key').bind(state),
   ])
   const sectionRows = sections.results as { section_key: SectionKey; is_visible: number }[]
@@ -62,6 +64,7 @@ export async function readHomepage(db: D1Database, state: State): Promise<Homepa
       : base.contact,
     skills: skills.results as unknown as SkillItem[],
     openTo: o?.sentence ?? '',
+    videos: videos.results as unknown as VideoItem[],
     sections: normalizeSections(sectionRows.map((r) => ({ key: r.section_key, visible: r.is_visible === 1 }))),
   }
 }
@@ -131,6 +134,14 @@ export async function saveSkillsDraft(db: D1Database, items: SkillItem[]): Promi
   await db.batch([db.prepare("DELETE FROM homepage_skills WHERE state = 'draft'"), ...items.map((s, i) => insert.bind(s.label, i))])
 }
 
+export async function saveVideosDraft(db: D1Database, items: VideoItem[]): Promise<void> {
+  const insert = db.prepare("INSERT INTO homepage_videos (state, video_id, title, sort_order) VALUES ('draft', ?, ?, ?)")
+  await db.batch([
+    db.prepare("DELETE FROM homepage_videos WHERE state = 'draft'"),
+    ...items.map((v, i) => insert.bind(v.videoId, v.title, i)),
+  ])
+}
+
 export async function saveSectionsDraft(db: D1Database, items: SectionSetting[]): Promise<void> {
   const insert = db.prepare("INSERT INTO homepage_section_settings (state, section_key, is_visible, sort_order) VALUES ('draft', ?, ?, ?)")
   await db.batch([
@@ -154,6 +165,7 @@ const SINGLETONS = {
 
 const LISTS = {
   homepage_skills: ['label', 'sort_order'],
+  homepage_videos: ['video_id', 'title', 'sort_order'],
   homepage_section_settings: ['section_key', 'is_visible', 'sort_order'],
 } as const
 

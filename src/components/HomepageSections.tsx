@@ -4,6 +4,7 @@ import { SECTION_LABELS } from '../../shared/homepage'
 import type { HomepageContact, HomepageStory, PublicSection } from '../../shared/types'
 import { Reveal, Words } from './Reveal'
 import { StoryDialog } from './StoryDialog'
+import { VideoGrid } from './VideoGrid'
 
 /**
  * The homepage sections that belong to one page (About or Work), in the owner's order.
@@ -88,6 +89,12 @@ function Section({ section, preview, grain }: { section: PublicSection; preview?
         <p className="max-w-[22ch] font-display text-3xl leading-tight font-medium text-balance text-(--p-fg) italic @md:text-4xl">
           <Words text={section.sentence} />
         </p>
+      )
+    case 'videos':
+      return (
+        <Titled id="videos">
+          <VideoGrid items={section.items} />
+        </Titled>
       )
     case 'contact':
       return (

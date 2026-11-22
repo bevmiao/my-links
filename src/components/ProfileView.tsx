@@ -44,6 +44,8 @@ function groupLinks(links: PublicLink[]) {
 export function ProfileView({ profile, links, homepage, mode, onToggleTheme, page = 'home', onNavigate, preview }: ProfileViewProps) {
   const palette = profilePalette(profile, mode)
   const glowStrength = mode === 'dark' ? 24 : 15
+  // With a background photo, skip the accent-coloured glows so the photo keeps its real colours.
+  const hasPhoto = !!profile.backgroundUrl
   const sections = homepage?.sections ?? []
   const intro = sections.find((s) => s.key === 'intro')
   const headline = intro?.key === 'intro' ? intro.intro.headline : ''
@@ -56,33 +58,37 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pag
       style={palette}
       className={`@container relative isolate flex flex-col overflow-hidden bg-(--p-bg) text-(--p-fg) transition-colors duration-500 ${preview ? 'min-h-full' : 'min-h-dvh'}`}
     >
-      {/* Background: optional image, accent glow, two slowly drifting lights, and film grain. */}
-      {profile.backgroundUrl ? (
+      {/* Background: either the owner's photo (lightly washed so text stays readable) or an accent
+          glow with two slowly drifting lights. Then the vignette and film grain. */}
+      {hasPhoto ? (
         <div aria-hidden="true" className="absolute inset-0 -z-10">
-          <img src={profile.backgroundUrl} alt="" className="h-full w-full scale-105 object-cover blur-[2px]" />
-          <div className="absolute inset-0 bg-(--p-bg) opacity-80" />
+          <img src={profile.backgroundUrl ?? undefined} alt="" className="h-full w-full scale-105 object-cover blur-[2px]" />
+          <div className="absolute inset-0 bg-(--p-bg) opacity-60" />
         </div>
-      ) : null}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px]"
-        style={{ background: `radial-gradient(60% 55% at 50% 0%, color-mix(in srgb, var(--p-accent) ${glowStrength}%, transparent), transparent 70%)` }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -top-40 -left-40 -z-10 size-[520px] animate-drift rounded-full blur-3xl"
-        style={{ background: `color-mix(in srgb, var(--p-accent) ${glowStrength - 8}%, transparent)` }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute top-[40%] -right-48 -z-10 size-[460px] animate-drift rounded-full blur-3xl [animation-delay:-9s]"
-        style={{ background: `color-mix(in srgb, var(--p-accent) ${glowStrength - 10}%, transparent)` }}
-      />
+      ) : (
+        <>
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px]"
+          style={{ background: `radial-gradient(60% 55% at 50% 0%, color-mix(in srgb, var(--p-accent) ${glowStrength}%, transparent), transparent 70%)` }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-40 -left-40 -z-10 size-[520px] animate-drift rounded-full blur-3xl"
+          style={{ background: `color-mix(in srgb, var(--p-accent) ${glowStrength - 8}%, transparent)` }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-[40%] -right-48 -z-10 size-[460px] animate-drift rounded-full blur-3xl [animation-delay:-9s]"
+          style={{ background: `color-mix(in srgb, var(--p-accent) ${glowStrength - 10}%, transparent)` }}
+        />
+        </>
+      )}
       {/* Film vignette: softly darker (or warmer, in light mode) towards the edges. */}
       <div
         aria-hidden="true"
         className={`pointer-events-none inset-0 -z-10 ${preview ? 'absolute' : 'fixed'}`}
-        style={{ background: 'radial-gradient(ellipse 85% 75% at 50% 45%, transparent 55%, var(--p-vignette))' }}
+        style={{ background: `radial-gradient(ellipse 85% 75% at 50% 45%, transparent 55%, ${hasPhoto ? 'rgba(0,0,0,0.3)' : 'var(--p-vignette)'})` }}
       />
       {profile.grain !== 'off' ? (
         <div

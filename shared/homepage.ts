@@ -14,6 +14,7 @@ import {
   type SectionKey,
   type SectionSetting,
   type SkillItem,
+  type VideoItem,
 } from './types'
 import { clean, normalizeUrl, str, type ValidationResult } from './validation'
 
@@ -27,6 +28,8 @@ export const HOMEPAGE_LIMITS = {
   location: 80,
   skill: 40,
   skills: 30,
+  videoTitle: 100,
+  videos: 12,
 } as const
 
 /** Headings as visitors see them. The one-sentence section has no heading on the public page. */
@@ -35,6 +38,7 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   story: 'My story',
   skills: 'Skills',
   opportunities: 'Up for',
+  videos: 'Videos',
   contact: 'Let’s work!',
   testimonials: 'Kind words',
 }
@@ -128,6 +132,51 @@ export function validateSkills(body: unknown): ValidationResult<SkillItem[]> {
   return done(f, items)
 }
 
+const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/
+
+/**
+ * Pulls the video ID out of anything a person might paste: a watch / share / Shorts / embed / live
+ * link from youtube.com, youtu.be or youtube-nocookie.com, or a bare 11-character ID.
+ * Returns null for anything else (other sites, playlists, channels).
+ */
+export function parseYouTubeId(input: string): string | null {
+  const raw = input.trim()
+  if (YOUTUBE_ID.test(raw)) return raw
+  let url: URL
+  try {
+    url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`)
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') return null
+  const host = url.hostname.toLowerCase().replace(/^(www|m|music)\./, '')
+  let id: string | null = null
+  if (host === 'youtu.be') id = url.pathname.split('/')[1] ?? null
+  else if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    if (url.pathname === '/watch') id = url.searchParams.get('v')
+    else {
+      const m = url.pathname.match(/^\/(?:embed|shorts|live|v)\/([^/]+)/)
+      id = m ? m[1] : null
+    }
+  }
+  return id && YOUTUBE_ID.test(id) ? id : null
+}
+
+export function validateVideos(body: unknown): ValidationResult<VideoItem[]> {
+  const f: Fields = {}
+  const items = list((body as { items?: unknown })?.items, L.videos, 'items', f).map((item, i) => {
+    const it = (item ?? {}) as Record<string, unknown>
+    const videoId = str(it.videoId)
+    if (!YOUTUBE_ID.test(videoId)) f[`items.${i}.videoId`] = 'That isn’t a YouTube video link.'
+    return {
+      videoId,
+      // Required: embedded videos need a title for screen readers.
+      title: text(it.title, L.videoTitle, `items.${i}.title`, f, { required: 'Give this video a title.' }),
+    }
+  })
+  return done(f, items)
+}
+
 /** The one-sentence "what I'm up for" line. */
 export function validateOpenTo(body: unknown): ValidationResult<string> {
   const f: Fields = {}
@@ -169,6 +218,7 @@ export function emptyHomepage(): HomepageContent {
     contact: { email: '', location: '', portfolioUrl: '', portfolioComingSoon: true },
     skills: [],
     openTo: '',
+    videos: [],
     sections: SECTION_KEYS.map((key) => ({ key, visible: false })),
   }
 }
@@ -196,6 +246,9 @@ export function toPublicHomepage(content: HomepageContent): PublicHomepage {
         break
       case 'opportunities':
         if (content.openTo) sections.push({ key, sentence: content.openTo })
+        break
+      case 'videos':
+        if (content.videos.length) sections.push({ key, items: content.videos })
         break
       case 'contact': {
         const c = content.contact

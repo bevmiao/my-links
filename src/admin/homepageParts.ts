@@ -12,6 +12,7 @@ export const HOMEPAGE_PARTS: {
   { route: 'skills', body: (d) => ({ items: d.skills }) },
   { route: 'open-to', body: (d) => ({ sentence: d.openTo }) },
   { route: 'story', body: (d) => d.story },
+  { route: 'videos', body: (d) => ({ items: d.videos }) },
 ]
 
 /** Which save route holds each field of HomepageContent (used to clear field errors on edit). */
@@ -22,6 +23,7 @@ export const ROUTE_FOR: Record<keyof HomepageContent, HomepageSectionRoute> = {
   skills: 'skills',
   openTo: 'open-to',
   story: 'story',
+  videos: 'videos',
 }
 
 /** Parts whose local edits differ from the saved draft. */

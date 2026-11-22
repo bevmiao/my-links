@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CircleDot, Plus, RotateCcw, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CircleDot, Plus, RotateCcw, Trash2, X } from 'lucide-react'
 import { useState, type KeyboardEvent } from 'react'
 import {
   HOMEPAGE_LIMITS as L,
@@ -9,9 +9,11 @@ import {
   validateSections,
   validateSkills,
   validateStory,
+  validateVideos,
   PAGE_LABELS,
+  parseYouTubeId,
 } from '../../shared/homepage'
-import { SECTION_PAGE, type HomepageAdminState, type HomepageContent, type SectionKey } from '../../shared/types'
+import { SECTION_PAGE, type HomepageAdminState, type HomepageContent, type SectionKey, type VideoItem } from '../../shared/types'
 import { adminApi, ApiRequestError, type HomepageSectionRoute } from '../lib/api'
 import { changedParts, ROUTE_FOR } from './homepageParts'
 import { PageTitle } from './ProfileEditor'
@@ -31,6 +33,7 @@ const VALIDATORS: Record<HomepageSectionRoute, (b: unknown) => { ok: boolean; fi
   skills: validateSkills,
   'open-to': validateOpenTo,
   story: validateStory,
+  videos: validateVideos,
 }
 
 const SECTION_HINTS: Record<SectionKey, string> = {
@@ -38,6 +41,7 @@ const SECTION_HINTS: Record<SectionKey, string> = {
   story: 'Where you grew up. Also opens when someone taps your location.',
   skills: 'Tags.',
   opportunities: 'One line about what you’re up for. Shows without a heading.',
+  videos: 'YouTube videos. They play right on your page.',
   contact: 'Email, location, and portfolio.',
   testimonials: 'Placeholder for now. Shows “Coming soon.”',
 }
@@ -263,6 +267,17 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
         </Field>
       </Card>
 
+      <Card
+        title={SECTION_LABELS.videos}
+        description="Paste a YouTube link. Visitors see the thumbnail, and the video plays on your page when they tap it. Turn on “Videos” in Sections to show them."
+      >
+        <VideoEditor
+          videos={draft.videos}
+          errors={errors}
+          onChange={(videos) => patch('videos', videos)}
+        />
+      </Card>
+
       <Card title={SECTION_LABELS.contact} description="Leave anything blank to hide it. LinkedIn stays in your social icons.">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Email" htmlFor="hp-email" error={err('contact', 'email')}>
@@ -440,6 +455,107 @@ function MoveButtons({ label, index, count, onMove }: { label: string; index: nu
       <Button variant="ghost" size="icon" aria-label={`Move ${label} down`} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
         <ArrowDown size={14} />
       </Button>
+    </div>
+  )
+}
+
+function VideoEditor({
+  videos,
+  errors,
+  onChange,
+}: {
+  videos: VideoItem[]
+  errors: Record<string, string>
+  onChange: (v: VideoItem[]) => void
+}) {
+  const [url, setUrl] = useState('')
+  const [urlError, setUrlError] = useState('')
+  const full = videos.length >= L.videos
+  function add() {
+    if (!url.trim() || full) return
+    const videoId = parseYouTubeId(url)
+    if (!videoId) {
+      setUrlError('That doesn’t look like a YouTube video link. Copy it from the Share button on YouTube.')
+      return
+    }
+    if (videos.some((v) => v.videoId === videoId)) {
+      setUrlError('That video is already in your list.')
+      return
+    }
+    onChange([...videos, { videoId, title: '' }])
+    setUrl('')
+    setUrlError('')
+  }
+  const listError = errors['videos.items']
+  return (
+    <div className="space-y-4">
+      {videos.length ? (
+        <ul className="space-y-3">
+          {videos.map((v, i) => {
+            const titleError = errors[`videos.items.${i}.title`]
+            const idError = errors[`videos.items.${i}.videoId`]
+            const name = v.title.trim() || `Video ${i + 1}`
+            return (
+              <li key={v.videoId} className="flex gap-3 rounded-xl border border-zinc-200/80 p-3 dark:border-zinc-800">
+                <img
+                  src={`https://i.ytimg.com/vi/${v.videoId}/mqdefault.jpg`}
+                  alt=""
+                  className="aspect-video w-28 shrink-0 rounded-lg bg-zinc-100 object-cover sm:w-36 dark:bg-zinc-800"
+                />
+                <div className="min-w-0 flex-1">
+                  <Field label="Title" htmlFor={`hp-video-${i}`} error={titleError ?? idError} counter={{ value: v.title.length, max: L.videoTitle }}>
+                    <Input
+                      id={`hp-video-${i}`}
+                      value={v.title}
+                      invalid={!!titleError}
+                      placeholder="What is this video?"
+                      onChange={(e) => onChange(videos.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
+                    />
+                  </Field>
+                </div>
+                <div className="flex shrink-0 flex-col items-center">
+                  <MoveButtons label={name} index={i} count={videos.length} onMove={(to) => onChange(move(videos, i, to))} />
+                  <Button variant="ghost" size="icon" aria-label={`Remove ${name}`} onClick={() => onChange(videos.filter((_, j) => j !== i))}>
+                    <Trash2 size={14} />
+                  </Button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
+      <Field
+        label="Add a video"
+        htmlFor="hp-video-url"
+        error={urlError || listError}
+        hint={`${videos.length}/${L.videos}. Paste the link from YouTube’s Share button.`}
+      >
+        <div className="flex gap-2">
+          <Input
+            id="hp-video-url"
+            value={url}
+            disabled={full}
+            inputMode="url"
+            autoCapitalize="off"
+            spellCheck={false}
+            invalid={!!urlError}
+            placeholder={full ? 'That’s the max' : 'https://youtu.be/…'}
+            onChange={(e) => {
+              setUrl(e.target.value)
+              setUrlError('')
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                add()
+              }
+            }}
+          />
+          <Button icon={<Plus size={14} />} onClick={add} disabled={full || !url.trim()}>
+            Add
+          </Button>
+        </div>
+      </Field>
     </div>
   )
 }
