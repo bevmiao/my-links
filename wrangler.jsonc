@@ -72,5 +72,47 @@
 	"observability": {
 		"enabled": true
 	},
-	"upload_source_maps": true
+	"upload_source_maps": true,
+
+	/**
+	 * Development environment: `wrangler deploy --env dev` and `wrangler dev --env dev`.
+	 * Completely separate Worker, D1 database and R2 bucket from production. Never point this
+	 * environment at the production resources above. Production never reads from these.
+	 */
+	"env": {
+		"dev": {
+			"name": "my-links-dev",
+			"assets": {
+				"binding": "ASSETS",
+				"not_found_handling": "single-page-application",
+				"run_worker_first": true
+			},
+			"workers_dev": false,
+			"preview_urls": false,
+			"routes": [
+				{ "pattern": "dev.links.flicksbymiao.com", "custom_domain": true },
+				{ "pattern": "dev.admin.flicksbymiao.com", "custom_domain": true }
+			],
+			"vars": {
+				"PUBLIC_HOSTNAME": "dev.links.flicksbymiao.com",
+				"ADMIN_HOSTNAME": "dev.admin.flicksbymiao.com",
+				"ACCESS_TEAM_DOMAIN": "throbbing-tree-63ad.cloudflareaccess.com",
+				/** REPLACE_ME: AUD tag of a Cloudflare Access app protecting dev.admin.flicksbymiao.com. Until set, admin requests fail closed. */
+				"ACCESS_AUD": "REPLACE_ME",
+				"ADMIN_EMAILS": "ryanbmiao@gmail.com"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "my-links-db-dev",
+					"database_id": "980aacda-351e-4828-b370-d9b084b50734",
+					"migrations_dir": "migrations"
+				}
+			],
+			"r2_buckets": [
+				{ "binding": "IMAGES", "bucket_name": "my-links-assets-dev" }
+			],
+			"observability": { "enabled": true }
+		}
+	}
 }

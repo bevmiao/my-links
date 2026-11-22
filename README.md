@@ -51,6 +51,8 @@ Every feature is backed by the Worker. Nothing is mocked in the shipped app.
 
 ---
 
+> **Start here:** project overview in [CONTEXT.md](CONTEXT.md), development rules in [INSTRUCTIONS.md](INSTRUCTIONS.md), the dev environment in [DEVELOPMENT.md](DEVELOPMENT.md), and history in [CHANGELOG.md](CHANGELOG.md).
+
 ## Local development
 
 **Requires:** Node.js 20+ (tested on 24) and npm.
