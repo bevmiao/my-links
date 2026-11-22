@@ -4,6 +4,9 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Changed (link cards)
+- Link cards on Home are white with dark text in dark mode too, like in light mode, so they're easier to read on a dark page or background photo. Only the cards change; the rest of the dark theme stays as it was.
+
 ### Changed (client strip, round 2)
 - "Worked with" shows just the logos now, no white tiles. Each logo can be shown in one colour that follows light and dark mode (on by default; needs a transparent background), or in its own colours.
 - Clients can open into a pop-up card that grows out of the logo: a title, bullet points on what you worked on, and up to four photos with descriptions. Clients without details stay plain logos. Migration `0009` adds the fields; photos are stored in R2 under `client-photo/` with the same checks as other uploads (PNG, JPEG or WebP, resized in the browser, 3 MB limit). Two placeholder clients got sample text.

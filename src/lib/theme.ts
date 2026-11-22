@@ -118,6 +118,25 @@ export const COZY_PRESET = { accentColor: '#c06a3c', backgroundLight: '#f6efe5',
  * CSS custom properties consumed by ProfileView. Derived from the owner's chosen colours so
  * any background colour stays readable in both themes.
  */
+/**
+ * Link cards are white with dark text in both themes (owner decision, 2026-11-22), which reads
+ * more cleanly on a dark page or background photo. They use the light-mode card colours; on a dark
+ * page the card is nearly opaque, because the light-mode 78% white would let the dark page show
+ * through and look grey. Applied as CSS variables on each card only, so the page around the cards
+ * keeps its own theme. In light mode nothing changes.
+ */
+export function linkCardSurface(profile: Pick<Profile, 'accentColor' | 'backgroundLight' | 'backgroundDark'>, mode: ResolvedMode): CSSProperties {
+  const light = profilePalette(profile, 'light') as Record<string, string>
+  const keys = ['--p-card', '--p-card-hover', '--p-border', '--p-shadow', '--p-fg', '--p-muted', '--p-accent-text'] as const
+  const surface: Record<string, string> = Object.fromEntries(keys.map((k) => [k, light[k]]))
+  if (mode === 'dark') {
+    surface['--p-card'] = 'rgba(255,255,255,0.95)'
+    surface['--p-card-hover'] = 'rgba(255,255,255,1)'
+    surface['--p-border'] = 'rgba(255,255,255,0.6)'
+  }
+  return surface as CSSProperties
+}
+
 export function profilePalette(profile: Pick<Profile, 'accentColor' | 'backgroundLight' | 'backgroundDark'>, mode: ResolvedMode) {
   const bg = mode === 'dark' ? profile.backgroundDark : profile.backgroundLight
   const darkSurface = isDarkColor(bg)
