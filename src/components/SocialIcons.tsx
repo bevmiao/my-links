@@ -1,4 +1,6 @@
+import * as m from 'motion/react-m'
 import type { SocialLink } from '../../shared/types'
+import { tapSquishIcon } from '../lib/motion'
 import { getPlatform } from './icons'
 
 export function SocialIcons({ socials, preview, className = 'justify-center' }: { socials: SocialLink[]; preview?: boolean; className?: string }) {
@@ -10,16 +12,17 @@ export function SocialIcons({ socials, preview, className = 'justify-center' }: 
         const { Icon, label } = platform!
         return (
           <li key={`${platform!.key}-${i}`}>
-            <a
+            <m.a
+              {...tapSquishIcon}
               href={url}
               target={preview ? '_blank' : undefined}
               rel="me noopener noreferrer"
               aria-label={label}
               title={label}
-              className="grid size-11 place-items-center rounded-full text-(--p-muted) transition duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1 hover:scale-110 hover:bg-(--p-card-hover) hover:text-(--p-accent-text) active:scale-90"
+              className="grid size-11 place-items-center rounded-full text-(--p-muted) transition-no-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1 hover:scale-110 hover:bg-(--p-card-hover) hover:text-(--p-accent-text)"
             >
               <Icon size={19} />
-            </a>
+            </m.a>
           </li>
         )
       })}

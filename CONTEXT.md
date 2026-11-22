@@ -10,7 +10,7 @@ Phase 1 ("Part One") is about a stable foundation and the features in the upgrad
 
 ## 2. Current technology stack
 
-- Frontend: React 19, TypeScript, Vite 8, Tailwind CSS v4, dnd-kit (sortable lists), lucide-react and simple-icons, Inter variable font.
+- Frontend: React 19, TypeScript, Vite 8, Tailwind CSS v4, dnd-kit (sortable lists), motion (public page animations, used only as LazyMotion + `m`; see `src/lib/motion.ts`), lucide-react and simple-icons, Inter variable font.
 - Backend: one Cloudflare Worker (`worker/index.ts`) that routes by hostname, serves static assets (`env.ASSETS`), and implements the API.
 - Data: Cloudflare D1 (SQLite). Images: Cloudflare R2 (bound as `IMAGES`).
 - Access control: Cloudflare Access on the admin hostname, plus Worker-side JWT verification.

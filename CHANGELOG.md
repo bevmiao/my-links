@@ -4,6 +4,13 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Changed (motion polish)
+- Page tabs: the highlight springs to the chosen tab and stretches slightly while it moves.
+- Story pop-up: grows out of the location you tapped and shrinks back into it when closed (Close, Esc, or tapping outside), instead of closing instantly.
+- Tap feedback that also works on phones (including iPhone): link cards, social icons, skill chips, the Work contact rows, and Read more press in and spring back.
+- My story: Read more opens to the story's real height with a soft spring while the bottom fade dissolves, and closes right away instead of after a delay. The button only appears when the story is actually cut off at the current screen width; otherwise the whole story shows.
+- Uses the `motion` package (small LazyMotion + `m` setup). Reduced-motion visitors still get no movement; the pop-up just fades. Public page JavaScript is about 35 kB larger (gzip).
+
 ### Added (Part One finish)
 - YouTube videos (migration `0007`): a "Videos" section on the Work page. Paste a YouTube link in the Homepage editor, give it a title, reorder or remove. Visitors see a thumbnail; the player (privacy-enhanced youtube-nocookie.com) loads and plays only when they tap. Up to 12 videos. Starts hidden until turned on in Sections.
 - Security: CSP now allows `frame-src https://www.youtube-nocookie.com` and thumbnails from `https://i.ytimg.com`, nothing else.

@@ -1,5 +1,7 @@
 import { Check, Share2 } from 'lucide-react'
-import { useState } from 'react'
+import { domAnimation, LazyMotion, MotionConfig, useReducedMotion, useSpring, useTransform, useVelocity } from 'motion/react'
+import * as m from 'motion/react-m'
+import { useEffect, useState } from 'react'
 import { PAGE_LABELS, PAGE_PATHS } from '../../shared/homepage'
 import { SECTION_PAGE, type PageKey, type Profile, type PublicHomepage, type PublicLink, type PublicSection } from '../../shared/types'
 import { profilePalette, type ResolvedMode } from '../lib/theme'
@@ -54,6 +56,9 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pag
   const known = pages.includes(page)
 
   return (
+    // Animations use the small `m` components (see src/lib/motion.ts); strict blocks `motion.*`.
+    <LazyMotion features={domAnimation} strict>
+    <MotionConfig reducedMotion="user">
     <div
       style={palette}
       className={`@container relative isolate flex flex-col overflow-hidden bg-(--p-bg) text-(--p-fg) transition-colors duration-500 ${preview ? 'min-h-full' : 'min-h-dvh'}`}
@@ -147,6 +152,8 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pag
         </span>
       </footer>
     </div>
+    </MotionConfig>
+    </LazyMotion>
   )
 }
 
@@ -216,6 +223,17 @@ function PageTabs({
   onNavigate?: (p: PageKey) => void
 }) {
   const index = Math.max(0, pages.indexOf(current))
+  // The highlight springs to the current tab and stretches a little while it moves, more when
+  // it moves faster. Visitors who ask for reduced motion see it jump straight there.
+  const reduce = useReducedMotion()
+  const position = useSpring(index * 100, { stiffness: 420, damping: 32, mass: 0.9 })
+  const speed = useVelocity(position)
+  const x = useTransform(position, (v) => `${v}%`)
+  const scaleX = useTransform(speed, [-900, 0, 900], [1.18, 1, 1.18])
+  useEffect(() => {
+    if (reduce) position.jump(index * 100)
+    else position.set(index * 100)
+  }, [index, reduce, position])
   const item =
     'relative z-10 grid min-h-10 place-items-center rounded-full px-3 text-sm font-medium transition duration-300 active:scale-95'
   return (
@@ -224,11 +242,10 @@ function PageTabs({
         className="relative grid rounded-full border border-(--p-border) bg-(--p-card) p-1 shadow-(--p-shadow) backdrop-blur-md"
         style={{ gridTemplateColumns: `repeat(${pages.length}, minmax(0, 1fr))` }}
       >
-        {/* Sliding highlight with a little overshoot. */}
-        <span
+        <m.span
           aria-hidden="true"
-          className="absolute inset-y-1 left-1 rounded-full bg-(--p-accent) shadow-[0_6px_20px_-6px_var(--p-accent)] transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-          style={{ width: `calc((100% - 0.5rem) / ${pages.length})`, transform: `translateX(${index * 100}%)` }}
+          className="absolute inset-y-1 left-1 rounded-full bg-(--p-accent) shadow-[0_6px_20px_-6px_var(--p-accent)]"
+          style={{ width: `calc((100% - 0.5rem) / ${pages.length})`, x, scaleX }}
         />
         {pages.map((p) => {
           const active = p === current

@@ -1,7 +1,10 @@
 import { ArrowRight, ArrowUpRight, ChevronDown, Mail, MapPin } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useReducedMotion } from 'motion/react'
+import * as m from 'motion/react-m'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { SECTION_LABELS } from '../../shared/homepage'
 import type { HomepageContact, HomepageStory, PublicSection } from '../../shared/types'
+import { tapSquish, tapSquishSoft } from '../lib/motion'
 import { Reveal, Words } from './Reveal'
 import { StoryDialog } from './StoryDialog'
 import { VideoGrid } from './VideoGrid'
@@ -73,12 +76,13 @@ function Section({ section, preview, grain }: { section: PublicSection; preview?
         <Titled id="skills">
           <ul className="flex flex-wrap gap-2">
             {section.items.map((s, i) => (
-              <li
+              <m.li
                 key={i}
-                className="cursor-default rounded-(--p-radius-chip) border border-(--p-border) bg-(--p-card) px-3.5 py-1.5 text-(length:--p-text-small) font-medium text-(--p-fg) transition duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] select-none hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--p-accent)_55%,transparent)] hover:text-(--p-accent-text) active:scale-90 even:hover:rotate-2 odd:hover:-rotate-2"
+                {...tapSquish}
+                className="cursor-default rounded-(--p-radius-chip) border border-(--p-border) bg-(--p-card) px-3.5 py-1.5 text-(length:--p-text-small) font-medium text-(--p-fg) transition-no-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] select-none hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--p-accent)_55%,transparent)] hover:text-(--p-accent-text) even:hover:rotate-2 odd:hover:-rotate-2"
               >
                 {s.label}
-              </li>
+              </m.li>
             ))}
           </ul>
         </Titled>
@@ -111,40 +115,81 @@ function Section({ section, preview, grain }: { section: PublicSection; preview?
   }
 }
 
-/** "My story": shows the start, expands to the full text. */
+/**
+ * "My story": shows the start, expands to the full text (animated to its real height). The
+ * "Read more" button only appears when the text is actually cut off at the current width; if
+ * at most one more line would be hidden, the whole story is shown instead.
+ */
 function StoryBlock({ story }: { story: HomepageStory }) {
-  const [open, setOpen] = useState(false)
-  const long = story.body.length > 260
+  // `smooth` is true only for changes the visitor made (the button). Measuring and resizing
+  // change the height instantly, so nothing animates on page load.
+  const [state, setState] = useState({ open: false, fits: true, smooth: false })
+  const { open, fits, smooth } = state
+  const reduce = useReducedMotion()
+  const ref = useRef<HTMLParagraphElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => {
+      const cs = getComputedStyle(el)
+      const collapsedPx = COLLAPSED_LINES_EM * parseFloat(cs.fontSize)
+      const hidden = el.scrollHeight - collapsedPx
+      const next = hidden <= parseFloat(cs.lineHeight)
+      setState((s) => (s.fits === next ? s : { ...s, fits: next, smooth: false }))
+    }
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [story.body])
+
+  const collapsed = !fits && !open
   return (
     <section aria-labelledby="section-story">
       <h2 id="section-story" className={headingClass}>
         {story.title || SECTION_LABELS.story}
       </h2>
       <div className="relative">
-        <p
+        <m.p
+          ref={ref}
           id="story-body"
-          className={`overflow-hidden ${proseClass} transition-[max-height] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            long && !open ? 'max-h-[8.25em] mask-[linear-gradient(to_bottom,black_55%,transparent)]' : 'max-h-[200em]'
-          }`}
+          initial={false}
+          // The fade at the bottom dissolves while the text opens (and returns as it closes), so
+          // the change reads as one movement.
+          animate={{ height: collapsed ? `${COLLAPSED_LINES_EM}em` : 'auto', '--story-fade': collapsed ? '55%' : '100%' }}
+          transition={reduce || !smooth ? { duration: 0 } : { type: 'spring', visualDuration: 0.6, bounce: 0.18 }}
+          className={`overflow-hidden ${proseClass} mask-[linear-gradient(to_bottom,black_var(--story-fade),transparent)]`}
         >
           {story.body}
-        </p>
+        </m.p>
       </div>
-      {long ? (
-        <button
+      {!fits ? (
+        <m.button
           type="button"
+          {...tapSquish}
           aria-expanded={open}
           aria-controls="story-body"
-          onClick={() => setOpen((o) => !o)}
-          className="group mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-(--p-radius-chip) text-(length:--p-text-small) font-semibold text-(--p-accent-text) transition active:scale-95"
+          onClick={() => setState((s) => ({ ...s, open: !s.open, smooth: true }))}
+          className="group mt-2 inline-flex min-h-11 items-center gap-1.5 rounded-(--p-radius-chip) text-(length:--p-text-small) font-semibold text-(--p-accent-text)"
         >
           {open ? 'Show less' : 'Read more'}
-          <ChevronDown size={16} aria-hidden="true" className={`transition duration-500 ${open ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />
-        </button>
+          <m.span
+            aria-hidden="true"
+            className="inline-flex"
+            initial={false}
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ type: 'spring', visualDuration: 0.5, bounce: 0.4 }}
+          >
+            <ChevronDown size={16} className={`transition duration-300 ${open ? '' : 'group-hover:translate-y-0.5'}`} />
+          </m.span>
+        </m.button>
       ) : null}
     </section>
   )
 }
+
+/** Collapsed height, in em: about five lines of body text, enough to read the start of the story. */
+const COLLAPSED_LINES_EM = 8.25
 
 function Contact({
   contact,
@@ -158,27 +203,38 @@ function Contact({
   grain?: boolean
 }) {
   const [storyOpen, setStoryOpen] = useState(false)
+  // Where the location button is on screen, so the story card can grow out of it.
+  const [storyFrom, setStoryFrom] = useState<DOMRect | null>(null)
   const portfolio = contact.portfolioComingSoon ? undefined : safeHref(contact.portfolioUrl)
   const row =
-    'group -mx-3 flex min-h-12 w-[calc(100%+1.5rem)] items-center gap-3 rounded-(--p-radius-inner) px-3 text-left text-(length:--p-text-body) text-(--p-fg) transition duration-300'
-  const interactive = 'hover:bg-(--p-card-hover) hover:text-(--p-accent-text) active:scale-[0.98]'
+    'group -mx-3 flex min-h-12 w-[calc(100%+1.5rem)] items-center gap-3 rounded-(--p-radius-inner) px-3 text-left text-(length:--p-text-body) text-(--p-fg) transition-no-transform duration-300'
+  const interactive = 'hover:bg-(--p-card-hover) hover:text-(--p-accent-text)'
   const icon = 'shrink-0 text-(--p-accent-text) transition duration-300 group-hover:scale-110'
   return (
     <ul className="space-y-1">
       {contact.email ? (
         <li>
-          <a href={`mailto:${encodeURI(contact.email).replace(/[?#]/g, encodeURIComponent)}`} className={`${row} ${interactive}`}>
+          <m.a {...tapSquishSoft} href={`mailto:${encodeURI(contact.email).replace(/[?#]/g, encodeURIComponent)}`} className={`${row} ${interactive}`}>
             <Mail size={18} className={icon} aria-hidden="true" />
             <span className="min-w-0 flex-1 break-words">{contact.email}</span>
             <ArrowRight size={16} aria-hidden="true" className="shrink-0 -translate-x-2 opacity-0 transition duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
-          </a>
+          </m.a>
         </li>
       ) : null}
       {contact.location ? (
         <li>
           {story ? (
             <>
-              <button type="button" onClick={() => setStoryOpen(true)} className={`${row} ${interactive}`} aria-haspopup="dialog">
+              <m.button
+                type="button"
+                {...tapSquishSoft}
+                onClick={(e) => {
+                  setStoryFrom(e.currentTarget.getBoundingClientRect())
+                  setStoryOpen(true)
+                }}
+                className={`${row} ${interactive}`}
+                aria-haspopup="dialog"
+              >
                 <MapPin size={18} className={icon} aria-hidden="true" />
                 <span>{contact.location}</span>
                 <span className="ml-1 inline-flex min-w-0 items-center gap-2 rounded-(--p-radius-chip) border border-(--p-border) px-2.5 py-0.5 text-(length:--p-text-small) font-medium text-(--p-muted) transition group-hover:border-[color-mix(in_srgb,var(--p-accent)_45%,transparent)] group-hover:text-(--p-accent-text)">
@@ -188,8 +244,15 @@ function Contact({
                   </span>
                   <span className="max-w-[14rem] truncate">{story.title || SECTION_LABELS.story}</span>
                 </span>
-              </button>
-              <StoryDialog story={story} location={contact.location} open={storyOpen} onClose={() => setStoryOpen(false)} grain={grain} />
+              </m.button>
+              <StoryDialog
+                story={story}
+                location={contact.location}
+                open={storyOpen}
+                onClose={() => setStoryOpen(false)}
+                grain={grain}
+                from={storyFrom}
+              />
             </>
           ) : (
             <p className={row}>
@@ -201,10 +264,10 @@ function Contact({
       ) : null}
       {portfolio ? (
         <li>
-          <a href={portfolio} target={preview ? '_blank' : undefined} rel="noopener noreferrer" className={`${row} ${interactive}`}>
+          <m.a {...tapSquishSoft} href={portfolio} target={preview ? '_blank' : undefined} rel="noopener noreferrer" className={`${row} ${interactive}`}>
             <ArrowUpRight size={18} className={`${icon} group-hover:translate-x-0.5 group-hover:-translate-y-0.5`} aria-hidden="true" />
             Portfolio
-          </a>
+          </m.a>
         </li>
       ) : contact.portfolioComingSoon ? (
         <li className={`${row} text-(--p-muted)`}>

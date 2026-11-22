@@ -1,5 +1,7 @@
 import { ArrowUpRight } from 'lucide-react'
+import * as m from 'motion/react-m'
 import type { ButtonStyle, PublicLink } from '../../shared/types'
+import { tapSquish } from '../lib/motion'
 import { getLinkIcon } from './icons'
 
 const RADIUS: Record<ButtonStyle, string> = {
@@ -20,13 +22,16 @@ export function LinkCard({ link, buttonStyle, preview, index = 0 }: LinkCardProp
   const icon = getLinkIcon(link.icon)
   const pill = buttonStyle === 'pill'
   return (
-    <a
+    // The entrance runs on this wrapper: a finished CSS animation keeps holding `transform`,
+    // which would block the tap animation on the card itself.
+    <div className="animate-fade-up" style={{ animationDelay: `${80 + index * 45}ms` }}>
+    <m.a
+      {...tapSquish}
       // Real visitors go through /go/:id, which records the click server-side and redirects.
       href={preview ? link.url : `/go/${link.id}`}
       target={preview ? '_blank' : undefined}
       rel="noopener noreferrer"
-      className={`group relative flex w-full animate-fade-up items-center gap-3.5 overflow-hidden border border-(--p-border) bg-(--p-card) shadow-(--p-shadow) backdrop-blur-md transition duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--p-accent)_45%,transparent)] hover:bg-(--p-card-hover) hover:shadow-[0_14px_34px_-12px_color-mix(in_srgb,var(--p-accent)_50%,transparent)] active:translate-y-0 active:scale-[0.97] ${RADIUS[buttonStyle]} ${pill ? 'px-4 py-3' : 'p-3.5'}`}
-      style={{ animationDelay: `${80 + index * 45}ms` }}
+      className={`group relative flex w-full items-center gap-3.5 overflow-hidden border border-(--p-border) bg-(--p-card) shadow-(--p-shadow) backdrop-blur-md transition-no-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1 hover:border-[color-mix(in_srgb,var(--p-accent)_45%,transparent)] hover:bg-(--p-card-hover) hover:shadow-[0_14px_34px_-12px_color-mix(in_srgb,var(--p-accent)_50%,transparent)] active:translate-y-0 ${RADIUS[buttonStyle]} ${pill ? 'px-4 py-3' : 'p-3.5'}`}
     >
       {/* A soft shine that sweeps across on hover. */}
       <span
@@ -51,6 +56,7 @@ export function LinkCard({ link, buttonStyle, preview, index = 0 }: LinkCardProp
       <span className="grid size-10 shrink-0 place-items-center text-(--p-muted) opacity-0 transition duration-300 group-hover:translate-x-0.5 group-hover:text-(--p-accent-text) group-hover:opacity-100 group-focus-visible:opacity-100">
         <ArrowUpRight size={18} aria-hidden="true" />
       </span>
-    </a>
+    </m.a>
+    </div>
   )
 }
