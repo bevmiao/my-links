@@ -80,7 +80,7 @@ These rules apply to every change. If a rule conflicts with a request, stop and 
 
 - Public page: first contentful paint under 1.5 s on a mid-range phone over 4G. Keep JavaScript for the public page small. Lazy-load the admin app.
 - Images: serve resized WebP or AVIF where possible, with `loading="lazy"` below the fold and explicit dimensions.
-- Video: never autoplay with sound. Use `preload="metadata"` or lazy embeds. YouTube embeds load only on interaction where practical.
+- Video: YouTube embeds only. There are no direct video uploads. Show a lightweight thumbnail and load the YouTube player only when the visitor clicks. Never autoplay with sound.
 - Cache static assets with hashed names. Keep admin responses uncached.
 
 ## 11. Testing requirements

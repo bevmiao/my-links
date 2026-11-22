@@ -50,13 +50,23 @@ Directories:
 | `profiles` | Exactly one row (`id = 1`): display name, username, bio, R2 keys for avatar and background, theme mode, colours, button style, socials (JSON). |
 | `links` | Title, url, description, icon, `is_active`, `sort_order`, timestamps. |
 | `analytics_events` | One row per view or click: type, link id (set null on delete), referrer hostname, country, device class, UTC timestamp. No IPs, cookies, or full user agents. |
+| `homepage_intro` | Headline, short intro, bio, professional background, interests (JSON). One row per `state`. |
+| `homepage_contact` | Email, phone, location, LinkedIn URL, resume URL (a hosted link, never an upload), portfolio URL, `portfolio_coming_soon`. One row per `state`. |
+| `homepage_skills`, `homepage_experience`, `homepage_opportunities` | Ordered list rows, each tagged with `state`. |
+| `homepage_sections` | Visibility and order of the six sections (`intro`, `experience`, `skills`, `opportunities`, `contact`, `testimonials`) per `state`. |
 
-Migrations: `migrations/0001_initial_schema.sql` is applied. Future schema changes go in `0002_*.sql`, `0003_*.sql`, and so on.
+`links` also has `category` (migration 0003): an optional group heading on the public page.
+
+**Draft and publish.** Every `homepage_*` table stores a `'draft'` and a `'published'` copy, distinguished by the `state` column. The admin editor writes drafts. Publishing copies every draft table over its published copy in one D1 batch (`worker/lib/homepage.ts`). Public routes read only published rows, and `toPublicHomepage()` (`shared/homepage.ts`) removes hidden sections and the placeholder portfolio URL before anything leaves the Worker. Testimonials have no table yet: the section is a placeholder slot.
+
+Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds the homepage tables and placeholder **drafts only**, so applying it publishes nothing), and `0003_add_link_categories.sql` (adds `links.category`). Applied locally. Not yet applied to `my-links-db-dev` or production. Future changes go in `0004_*.sql` and up.
 
 ## 5. API architecture
 
 - Public: `GET /api/profile`, `POST /api/track/view`, `POST /api/track/click`, `GET /go/:id`, `GET /media/<key>`.
 - Admin (Access-protected host only): `/api/admin/me`, profile read and write, link CRUD and reorder, image upload and delete (`/api/admin/images/{avatar|background}`), analytics summary.
+- Homepage (admin): `GET /api/admin/homepage` returns the draft, the published copy, `publishedAt`, and `hasUnpublishedChanges`. `PUT /api/admin/homepage/{intro|contact|skills|experience|opportunities|sections}` validates and saves one section to the draft. `POST /api/admin/homepage/publish` makes the draft live. `POST /api/admin/homepage/discard` resets the draft to the live version. All return the same state shape.
+- `GET /api/profile` and the HTML-embedded data include `homepage`: the published, visible sections only, or `null` before the first publish.
 - Every admin write requires a same-origin `Origin` header (CSRF) and a valid Access JWT. The Worker fails closed if Access is not configured.
 - All input is validated again on the server (`shared/validation.ts`). Errors are JSON with safe messages.
 
@@ -70,15 +80,17 @@ Migrations: `migrations/0001_initial_schema.sql` is applied. Future schema chang
 
 - Public profile with avatar, name, @username, bio, social icons, link cards, light and dark theme toggle, custom colours, button styles, and background image.
 - Link click tracking with redirect, and view counting once per browser session.
-- Admin dashboard: profile editor, image uploads, link manager (add, edit, delete, show or hide, drag-and-drop ordering), appearance editor, live preview with unsaved edits, analytics (KPIs, traffic chart, top links, referrers, countries, devices).
+- Admin dashboard: profile editor, image uploads, link manager (add, edit, delete, show or hide, drag-and-drop ordering, categories), appearance editor, live preview with unsaved edits, analytics (KPIs, traffic chart, top links, referrers, countries, devices).
+- Homepage sections (Part One, pass 1): About me (headline, intro, bio, background, interests), Experience, Skills, Open to (six placeholder opportunity categories), Contact (email, phone, location, LinkedIn link, resume link, portfolio "coming soon"), and a Testimonials placeholder slot. Edited in the dashboard **Homepage** tab with save-draft, preview, publish, and reset-to-live. Placeholder content is in place until the owner supplies real copy.
 - Security model: Access on the admin host, Worker JWT verification, email allowlist, CSRF check, strict CSP, HSTS, no-store on admin responses, URL scheme allowlist, and no open redirect.
 
 ## 8. Required functionality (Part One, from the upgrade brief)
 
 - Homepage as the central identity page: profile photo, name and intro, biography, personal intro, professional background, areas of interest, social links, contact information.
-- Professional presence: LinkedIn as an external link (no LinkedIn API), resume or CV access, experience, skills, accomplishments, testimonials, and opportunity categories (employment, collaborations, networking, freelance, business, creative partnerships).
+- Professional presence: LinkedIn as an external link (no LinkedIn API), resume access as a link to a hosted file (e.g. Google Drive, no upload), experience, skills, accomplishments, a testimonials placeholder slot (no testimonials management), and opportunity categories (employment, collaborations, networking, freelance, business, creative partnerships, all placeholders until the owner decides the final list).
 - Social and external links: categorised, ordered, editable, removable from the admin UI.
-- Photography and videography: galleries with categories, featured projects, descriptions, external media links, YouTube embeds, and direct video uploads to R2. Images are optimised and originals are preserved where practical.
+- Photography and videography: **the portfolio will be a separate site.** This site only links to it (a "Portfolio" link marked "coming soon" until it exists). No galleries are built here.
+- Video: **YouTube only.** Videos are embedded and play inside the site, loading the player only when the visitor interacts (no player on page load). **No direct video uploads.** Not built yet; planned for a later pass. It will need a `frame-src` CSP entry for the YouTube embed domain.
 - Admin area for homepage content, profile, biography, photo, social links, professional information, resume, media, featured content, projects, contact details, section visibility, and ordering. Changes previewable before publishing. Admin is never exposed to the public.
 - Privacy: public homepage. Unpublished content is never public. Secrets never reach the frontend. Admin data is never exposed through public APIs.
 - Security review items: auth, authz, input validation, upload validation and limits, secrets, error handling, rate limiting where appropriate.
@@ -110,5 +122,5 @@ Git: `main` is the baseline. `dev` is the working branch for this upgrade. `secu
 
 ## 13. Future roadmap
 
-- Part One: foundation, documentation, dev environment, homepage structure, professional and social sections, media galleries and YouTube embeds, uploads, admin visual editor, preview and publish flow, tests, security review.
+- Part One: foundation, documentation, dev environment, homepage structure, professional and social sections, YouTube embeds (click to load, no video uploads), admin visual editor, preview and publish flow, tests, security review. Done in pass 1: dev deploy guard, homepage sections with draft/publish and the Homepage editor, link categories, design tokens. The portfolio and its galleries will be a separate site.
 - Part Two (reserved): premium design system, animations, advanced multimedia portfolio, analytics and visitor insights, richer dashboard, AI features, networking features, extra customisation.

@@ -39,8 +39,8 @@ Every feature is backed by the Worker. Nothing is mocked in the shipped app.
 ├── worker/                   Cloudflare Worker (API + hostname routing + asset serving)
 │   ├── index.ts              routes by hostname, enforces Access, security headers
 │   ├── routes/public.ts      /api/profile, /api/track/view, /go/:id, /media/*
-│   ├── routes/admin.ts       /api/admin/* (profile, links, images, analytics)
-│   └── lib/                  access (JWT verification), db, analytics, media (R2), html, http
+│   ├── routes/admin.ts       /api/admin/* (profile, links, images, homepage, analytics)
+│   └── lib/                  access (JWT verification), db, homepage (draft/publish), analytics, media (R2), html, http
 ├── shared/                   types + validation used by both sides (Worker is authoritative)
 ├── migrations/               D1 schema
 ├── seed/seed.sql             sample profile + links
@@ -87,15 +87,19 @@ npm run dev                       # http://localhost:5173
 
 ## Database (D1)
 
-Schema: `migrations/0001_initial_schema.sql`
+Schema: `migrations/0001_initial_schema.sql`, `0002_add_homepage_sections.sql`, `0003_add_link_categories.sql`
 
 | Table | Purpose |
 |---|---|
 | `profiles` | Exactly one row (`id = 1`): name, username, bio, R2 image keys, theme mode, colours, link style, socials (JSON) |
-| `links` | title, url, description, icon, `is_active`, `sort_order`, timestamps |
+| `links` | title, url, description, icon, `category`, `is_active`, `sort_order`, timestamps |
 | `analytics_events` | one row per view or click: `type`, `link_id`, referrer hostname, country, device class, UTC timestamp |
+| `homepage_intro`, `homepage_contact` | About me and contact/professional links. One `draft` and one `published` row each |
+| `homepage_skills`, `homepage_experience`, `homepage_opportunities`, `homepage_sections` | Ordered rows tagged `draft` or `published` |
 
-To add a schema change, create `migrations/0002_<name>.sql` and run `npm run db:migrate:local` (then `:remote` when you deploy). All queries use bound parameters.
+**Homepage draft and publish.** The dashboard's Homepage tab saves to the `draft` rows. **Publish** copies every draft table to its `published` copy in one atomic batch. The public site only ever reads `published` rows, and hidden sections are removed before data leaves the Worker. Migration 0002 inserts placeholder content as drafts only, so applying it changes nothing publicly.
+
+To add a schema change, create the next numbered file (e.g. `migrations/0004_<name>.sql`) and run `npm run db:migrate:local` (then `:remote` when you deploy). All queries use bound parameters.
 
 Deleting a link keeps its past clicks in your all-time totals (`ON DELETE SET NULL`).
 
@@ -187,7 +191,8 @@ npm test
 The tests run inside `workerd` through `@cloudflare/vitest-plugin`, using the real Worker, the real D1 migrations and a real R2 binding (isolated per test file). The only stand-in is Cloudflare Access's public-key endpoint, which serves a locally generated RSA key so the Worker can verify real signed JWTs. They cover:
 
 - **Access enforcement:** missing, forged, expired and wrong-audience tokens; the email allowlist; admin pages and assets as well as APIs; the dev bypass ignored on real hostnames; admin paths returning 404 on the public host; CSRF.
-- **Profile and links:** CRUD, validation, ordering, and only active links appearing publicly.
+- **Profile and links:** CRUD, validation, ordering, categories, and only active links appearing publicly.
+- **Homepage draft/publish:** placeholder drafts never public, per-section server validation, drafts staying private until publish, hidden sections removed from public data, reset to live, and published tables matching the draft exactly.
 - **HTML injection:** escaping of embedded data and meta tags, and the CSP.
 - **Analytics:** recording, bot filtering, the no-open-redirect rule, and the summary maths.
 - **R2:** upload, serving, cleanup of replaced images, and rejecting disguised, oversized or unknown files.
