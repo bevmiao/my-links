@@ -70,15 +70,15 @@ export interface PublicPageData {
  * 'opportunities' is the one-sentence "what I'm up for" section (the key predates the redesign).
  * 'experience' was removed in pass 1b; any stored row for it is ignored.
  */
-export const SECTION_KEYS = ['intro', 'story', 'skills', 'opportunities', 'videos', 'contact', 'testimonials'] as const
+export const SECTION_KEYS = ['intro', 'story', 'skills', 'opportunities', 'videos', 'contact', 'testimonials', 'clients'] as const
 export type SectionKey = (typeof SECTION_KEYS)[number]
 
 /** Public pages. Home holds the links; homepage sections live on About and Work. */
 export const PAGES = ['home', 'about', 'work'] as const
 export type PageKey = (typeof PAGES)[number]
 
-/** Which page each section appears on. Order within a page follows the section order. */
-export const SECTION_PAGE: Record<SectionKey, Exclude<PageKey, 'home'>> = {
+/** Which page each section appears on. Order within a page follows the section order. Home shows sections under the links. */
+export const SECTION_PAGE: Record<SectionKey, PageKey> = {
   intro: 'about',
   story: 'about',
   skills: 'about',
@@ -86,6 +86,7 @@ export const SECTION_PAGE: Record<SectionKey, Exclude<PageKey, 'home'>> = {
   videos: 'work',
   contact: 'work',
   testimonials: 'work',
+  clients: 'home',
 }
 
 /** "Where I grew up": shown on the About page and when a visitor taps the location. */
@@ -124,6 +125,21 @@ export interface VideoItem {
   title: string
 }
 
+/**
+ * A client in the logo strip. `logoKey` is an R2 key under client-logo/ (an uploaded logo), a
+ * bundled placeholder (placeholder/client-N.png), or null for a text-only name.
+ */
+export interface ClientItem {
+  name: string
+  logoKey: string | null
+}
+
+/** Public shape of a client: the logo's URL instead of its storage key. */
+export interface PublicClient {
+  name: string
+  logoUrl: string | null
+}
+
 export interface SectionSetting {
   key: SectionKey
   visible: boolean
@@ -138,6 +154,7 @@ export interface HomepageContent {
   /** One sentence about what the owner is up for (shown in the 'opportunities' section). */
   openTo: string
   videos: VideoItem[]
+  clients: ClientItem[]
   /** Every section key exactly once, in display order. */
   sections: SectionSetting[]
 }
@@ -160,6 +177,7 @@ export type PublicSection =
   /** `story` is set only when the story section is visible, so a hidden story never leaks through the location pop-up. */
   | { key: 'contact'; contact: HomepageContact; story: HomepageStory | null }
   | { key: 'testimonials' }
+  | { key: 'clients'; items: PublicClient[] }
 
 export interface PublicHomepage {
   sections: PublicSection[]

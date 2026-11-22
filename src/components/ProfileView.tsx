@@ -135,7 +135,14 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pag
             {!known ? (
               <NothingHere preview={preview} onNavigate={onNavigate} />
             ) : page === 'home' ? (
-              <HomeLinks links={links} profile={profile} preview={preview} empty={!sections.length} />
+              <>
+                <HomeLinks links={links} profile={profile} preview={preview} empty={!sections.length} />
+                {byPage('home').length ? (
+                  <div className="mt-(--p-section-gap)">
+                    <PageSections sections={byPage('home')} preview={preview} grain={profile.grain !== 'off'} />
+                  </div>
+                ) : null}
+              </>
             ) : (
               <PageSections sections={byPage(page)} preview={preview} grain={profile.grain !== 'off'} />
             )}

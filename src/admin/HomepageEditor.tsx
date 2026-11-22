@@ -1,8 +1,9 @@
-import { ArrowDown, ArrowUp, CircleDot, Plus, RotateCcw, Trash2, X } from 'lucide-react'
+import { CircleDot, Plus, RotateCcw, Trash2, X } from 'lucide-react'
 import { useState, type KeyboardEvent } from 'react'
 import {
   HOMEPAGE_LIMITS as L,
   SECTION_LABELS,
+  validateClients,
   validateContact,
   validateIntro,
   validateOpenTo,
@@ -15,7 +16,9 @@ import {
 } from '../../shared/homepage'
 import { SECTION_PAGE, type HomepageAdminState, type HomepageContent, type SectionKey, type VideoItem } from '../../shared/types'
 import { adminApi, ApiRequestError, type HomepageSectionRoute } from '../lib/api'
+import { ClientEditor } from './ClientEditor'
 import { changedParts, ROUTE_FOR } from './homepageParts'
+import { MoveButtons } from './MoveButtons'
 import { PageTitle } from './ProfileEditor'
 import { Button, Card, cx, Field, Input, Modal, Switch, Textarea, useToast } from './ui'
 
@@ -34,6 +37,7 @@ const VALIDATORS: Record<HomepageSectionRoute, (b: unknown) => { ok: boolean; fi
   'open-to': validateOpenTo,
   story: validateStory,
   videos: validateVideos,
+  clients: validateClients,
 }
 
 const SECTION_HINTS: Record<SectionKey, string> = {
@@ -44,6 +48,7 @@ const SECTION_HINTS: Record<SectionKey, string> = {
   videos: 'YouTube videos. They play right on your page.',
   contact: 'Email, location, and portfolio.',
   testimonials: 'Placeholder for now. Shows “Coming soon.”',
+  clients: 'A row of client logos under your links.',
 }
 
 export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
@@ -132,9 +137,9 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
         onRevert={() => setConfirmRevert(true)}
       />
 
-      <Card title="Sections" description="Your links live on Home. Turn sections on or off and move them up or down within their page.">
+      <Card title="Sections" description="Your links are always on Home. Turn sections on or off and move them up or down within their page.">
         <div className="space-y-5">
-          {(['about', 'work'] as const).map((pageKey) => {
+          {(['home', 'about', 'work'] as const).map((pageKey) => {
             const onPage = draft.sections.map((s, i) => ({ s, i })).filter(({ s }) => SECTION_PAGE[s.key] === pageKey)
             return (
               <div key={pageKey}>
@@ -174,6 +179,13 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
           })}
         </div>
         {errors['sections.items'] ? <p className="mt-2 text-xs text-red-600 dark:text-red-400">{errors['sections.items']}</p> : null}
+      </Card>
+
+      <Card
+        title="Worked with"
+        description="Client logos in a row under your links on Home. Names are the logos’ alt text, and clients without a logo show their name instead. Turn the section on in Sections above."
+      >
+        <ClientEditor clients={draft.clients} errors={errors} onChange={(clients) => patch('clients', clients)} />
       </Card>
 
       <Card title="About" description="Your photo and name come from the Profile tab.">
@@ -444,19 +456,6 @@ function formatWhen(iso: string | null) {
   } catch {
     return iso
   }
-}
-
-function MoveButtons({ label, index, count, onMove }: { label: string; index: number; count: number; onMove: (to: number) => void }) {
-  return (
-    <div className="flex shrink-0">
-      <Button variant="ghost" size="icon" aria-label={`Move ${label} up`} disabled={index === 0} onClick={() => onMove(index - 1)}>
-        <ArrowUp size={14} />
-      </Button>
-      <Button variant="ghost" size="icon" aria-label={`Move ${label} down`} disabled={index === count - 1} onClick={() => onMove(index + 1)}>
-        <ArrowDown size={14} />
-      </Button>
-    </div>
-  )
 }
 
 function VideoEditor({

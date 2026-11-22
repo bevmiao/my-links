@@ -1,14 +1,14 @@
 import { Crop, ImagePlus, Trash2, UploadCloud } from 'lucide-react'
 import { useRef, useState, type DragEvent } from 'react'
 import type { Profile } from '../../shared/types'
-import { ALLOWED_IMAGE_TYPES, IMAGE_RULES, type ImageKind } from '../../shared/validation'
+import { ALLOWED_IMAGE_TYPES, IMAGE_RULES, type ProfileImageKind } from '../../shared/validation'
 import { adminApi } from '../lib/api'
 import { MAX_INPUT_BYTES, SHRINK_MAX_SIDE, shrinkImage } from '../lib/shrinkImage'
 import { AvatarCropper } from './AvatarCropper'
 import { Button, cx, useToast } from './ui'
 
 interface ImageUploaderProps {
-  kind: ImageKind
+  kind: ProfileImageKind
   currentUrl: string | null
   onUpdated: (p: Profile) => void
   shape?: 'circle' | 'wide'

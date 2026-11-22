@@ -17,12 +17,22 @@ export const LIMITS = {
   links: 100,
 } as const
 
-export const IMAGE_RULES = {
-  avatar: { maxBytes: 2 * 1024 * 1024, label: '2 MB' },
-  background: { maxBytes: 5 * 1024 * 1024, label: '5 MB' },
-} as const
-export type ImageKind = keyof typeof IMAGE_RULES
 export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const
+export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number]
+
+/**
+ * Upload rules per kind of image. `types` is checked against the real type found in the file's
+ * magic bytes, never the declared one. SVG is never accepted (it can carry script).
+ * Client logos are stored under client-logo/ and take no GIFs.
+ */
+export const IMAGE_RULES = {
+  avatar: { maxBytes: 2 * 1024 * 1024, label: '2 MB', types: ALLOWED_IMAGE_TYPES },
+  background: { maxBytes: 5 * 1024 * 1024, label: '5 MB', types: ALLOWED_IMAGE_TYPES },
+  'client-logo': { maxBytes: 1024 * 1024, label: '1 MB', types: ['image/png', 'image/jpeg', 'image/webp'] },
+} as const satisfies Record<string, { maxBytes: number; label: string; types: readonly AllowedImageType[] }>
+export type ImageKind = keyof typeof IMAGE_RULES
+/** Images that belong to the profile (one each, stored on the profile row). */
+export type ProfileImageKind = 'avatar' | 'background'
 
 export const THEME_MODES: ThemeMode[] = ['light', 'dark', 'system']
 export const BUTTON_STYLES: ButtonStyle[] = ['rounded', 'pill', 'square']
@@ -171,7 +181,7 @@ export function validateProfileInput(body: unknown): ValidationResult<ProfileInp
 }
 
 /** Detect the real image type from magic bytes (never trust the client's Content-Type). */
-export function sniffImageType(bytes: Uint8Array): (typeof ALLOWED_IMAGE_TYPES)[number] | null {
+export function sniffImageType(bytes: Uint8Array): AllowedImageType | null {
   const b = bytes
   if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a)
     return 'image/png'

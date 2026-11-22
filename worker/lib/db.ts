@@ -1,6 +1,6 @@
 /** D1 queries for the profile and links. All statements use bound parameters. */
 import type { Link, LinkInput, Profile, ProfileInput, PublicLink, SocialLink } from '../../shared/types'
-import { LIMITS, type ImageKind } from '../../shared/validation'
+import { LIMITS, type ProfileImageKind } from '../../shared/validation'
 import { HttpError } from './http'
 
 interface ProfileRow {
@@ -109,18 +109,18 @@ export async function updateProfile(db: D1Database, input: ProfileInput): Promis
   return getProfile(db)
 }
 
-const IMAGE_COLUMN: Record<ImageKind, 'avatar_key' | 'background_key'> = {
+const IMAGE_COLUMN: Record<ProfileImageKind, 'avatar_key' | 'background_key'> = {
   avatar: 'avatar_key',
   background: 'background_key',
 }
 
-export async function getImageKey(db: D1Database, kind: ImageKind): Promise<string | null> {
+export async function getImageKey(db: D1Database, kind: ProfileImageKind): Promise<string | null> {
   const col = IMAGE_COLUMN[kind]
   const row = await db.prepare(`SELECT ${col} AS k FROM profiles WHERE id = 1`).first<{ k: string | null }>()
   return row?.k ?? null
 }
 
-export async function setImageKey(db: D1Database, kind: ImageKind, key: string | null): Promise<void> {
+export async function setImageKey(db: D1Database, kind: ProfileImageKind, key: string | null): Promise<void> {
   const col = IMAGE_COLUMN[kind] // whitelisted column name, never user input
   await db.prepare(`UPDATE profiles SET ${col} = ?, updated_at = datetime('now') WHERE id = 1`).bind(key).run()
 }

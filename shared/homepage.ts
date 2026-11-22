@@ -13,6 +13,8 @@ import {
   type PublicSection,
   type SectionKey,
   type SectionSetting,
+  type ClientItem,
+  type PublicClient,
   type SkillItem,
   type VideoItem,
 } from './types'
@@ -30,6 +32,8 @@ export const HOMEPAGE_LIMITS = {
   skills: 30,
   videoTitle: 100,
   videos: 12,
+  clientName: 60,
+  clients: 24,
 } as const
 
 /** Headings as visitors see them. The one-sentence section has no heading on the public page. */
@@ -41,6 +45,7 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   videos: 'Videos',
   contact: 'Let’s work!',
   testimonials: 'Kind words',
+  clients: 'Worked with',
 }
 
 export const PAGE_LABELS: Record<PageKey, string> = { home: 'Home', about: 'About', work: 'Work' }
@@ -177,6 +182,35 @@ export function validateVideos(body: unknown): ValidationResult<VideoItem[]> {
   return done(f, items)
 }
 
+/** An uploaded client logo in R2. Only keys the Worker generated look like this. */
+export const CLIENT_LOGO_KEY = /^client-logo\/[0-9a-f-]{36}\.(png|jpg|webp)$/
+/** Placeholder logos bundled with the site (public/placeholders/), used until real ones are uploaded. */
+export const PLACEHOLDER_LOGO_KEY = /^placeholder\/client-[1-4]\.png$/
+
+/** Where a client logo is served from: R2 through /media/, or the bundled placeholder file. */
+export function clientLogoUrl(key: string | null): string | null {
+  if (!key) return null
+  if (CLIENT_LOGO_KEY.test(key)) return `/media/${key}`
+  if (PLACEHOLDER_LOGO_KEY.test(key)) return `/placeholders/${key.slice('placeholder/'.length)}`
+  return null
+}
+
+export function validateClients(body: unknown): ValidationResult<ClientItem[]> {
+  const f: Fields = {}
+  const items = list((body as { items?: unknown })?.items, L.clients, 'items', f).map((item, i) => {
+    const it = (item ?? {}) as Record<string, unknown>
+    const name = text(it.name, L.clientName, `items.${i}.name`, f, { required: 'Add the client’s name. It’s also the logo’s alt text.' })
+    let logoKey: string | null = null
+    if (it.logoKey !== null && it.logoKey !== undefined && it.logoKey !== '') {
+      const key = str(it.logoKey)
+      if (CLIENT_LOGO_KEY.test(key) || PLACEHOLDER_LOGO_KEY.test(key)) logoKey = key
+      else f[`items.${i}.logoKey`] = 'That logo isn’t one of your uploads. Upload it again.'
+    }
+    return { name, logoKey }
+  })
+  return done(f, items)
+}
+
 /** The one-sentence "what I'm up for" line. */
 export function validateOpenTo(body: unknown): ValidationResult<string> {
   const f: Fields = {}
@@ -219,6 +253,7 @@ export function emptyHomepage(): HomepageContent {
     skills: [],
     openTo: '',
     videos: [],
+    clients: [],
     sections: SECTION_KEYS.map((key) => ({ key, visible: false })),
   }
 }
@@ -260,6 +295,13 @@ export function toPublicHomepage(content: HomepageContent): PublicHomepage {
       }
       case 'testimonials':
         sections.push({ key })
+        break
+      case 'clients':
+        if (content.clients.length) {
+          // Only the name and the logo's URL go public; storage keys stay private.
+          const items: PublicClient[] = content.clients.map((c) => ({ name: c.name, logoUrl: clientLogoUrl(c.logoKey) }))
+          sections.push({ key, items })
+        }
         break
     }
   }

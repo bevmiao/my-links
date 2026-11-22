@@ -11,12 +11,13 @@
  *
  * The server still re-validates every upload (size and real file type).
  */
-export const SHRINK_MAX_SIDE = { avatar: 800, background: 2400 } as const
+export const SHRINK_MAX_SIDE = { avatar: 800, background: 2400, 'client-logo': 600 } as const
 
 /** Larger than this, we don't even try to decode (protects the browser tab). */
 export const MAX_INPUT_BYTES = 40 * 1024 * 1024
 
-export async function shrinkImage(file: File, maxSide: number, maxBytes: number): Promise<File> {
+/** `keepAlpha`: for logos. Falls back to PNG instead of JPEG so transparent areas stay transparent. */
+export async function shrinkImage(file: File, maxSide: number, maxBytes: number, opts: { keepAlpha?: boolean } = {}): Promise<File> {
   if (file.type === 'image/gif') return file
 
   let bitmap: ImageBitmap
@@ -43,7 +44,7 @@ export async function shrinkImage(file: File, maxSide: number, maxBytes: number)
     ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(bitmap, 0, 0, width, height)
 
-    return (await encodeCanvas(canvas, maxBytes, file.name)) ?? file
+    return (await encodeCanvas(canvas, maxBytes, file.name, opts)) ?? file
   } finally {
     bitmap.close()
   }
@@ -53,16 +54,25 @@ export async function shrinkImage(file: File, maxSide: number, maxBytes: number)
  * Encodes a canvas as WebP (JPEG where WebP encoding isn't available), stepping quality down a
  * little until it fits `maxBytes`. Returns null if the browser can't encode at all.
  */
-export async function encodeCanvas(canvas: HTMLCanvasElement, maxBytes: number, originalName: string): Promise<File | null> {
+export async function encodeCanvas(
+  canvas: HTMLCanvasElement,
+  maxBytes: number,
+  originalName: string,
+  opts: { keepAlpha?: boolean } = {},
+): Promise<File | null> {
   let blob: Blob | null = null
   for (const quality of [0.86, 0.8, 0.72, 0.62]) {
     blob = await toBlob(canvas, 'image/webp', quality)
-    // Browsers that can't encode WebP silently return PNG; use JPEG there instead.
-    if (blob && blob.type !== 'image/webp') blob = await toBlob(canvas, 'image/jpeg', quality)
+    // Browsers that can't encode WebP silently return PNG. Keep that for logos (transparency);
+    // use JPEG for photos.
+    if (blob && blob.type !== 'image/webp') {
+      if (opts.keepAlpha) break
+      blob = await toBlob(canvas, 'image/jpeg', quality)
+    }
     if (blob && blob.size <= maxBytes) break
   }
   if (!blob) return null
-  const ext = blob.type === 'image/webp' ? 'webp' : 'jpg'
+  const ext = blob.type === 'image/webp' ? 'webp' : blob.type === 'image/png' ? 'png' : 'jpg'
   const name = `${originalName.replace(/\.[^.]+$/, '') || 'image'}.${ext}`
   return new File([blob], name, { type: blob.type, lastModified: Date.now() })
 }

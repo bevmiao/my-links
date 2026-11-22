@@ -111,6 +111,8 @@ Deleting a link keeps its past clicks in your all-time totals (`ON DELETE SET NU
 - **Automatic resizing in the browser:** the dashboard accepts any size photo (including iPhone HEIC where the browser can open it) and shrinks it before upload (`src/lib/shrinkImage.ts`): longest side 800 px for profile photos and 2400 px for backgrounds, re-encoded as WebP (JPEG fallback). A 15 MB camera photo becomes a sharp file of a few hundred KB or less. GIFs are not resized, so animation is kept. No dependency.
 - Profile photos (≤ 2 MB after resizing) and background images (≤ 5 MB after resizing) are uploaded through `POST /api/admin/images/{avatar|background}` and stored as `avatar/<uuid>.<ext>` / `background/<uuid>.<ext>`.
 - **Validation happens on the server:** the request size is checked before the body is read, and the real type is detected from the file's magic bytes, so the browser's declared type is ignored. Only PNG, JPEG, WebP and GIF are accepted. SVG is refused because it can contain script.
+- **Client logos** (the "Worked with" strip) go through `POST /api/admin/images/client-logo` and are stored as `client-logo/<uuid>.<ext>`. Same checks, with a 1 MB limit and only PNG, JPEG and WebP (no GIF, no SVG). The dashboard resizes them to 600 px and keeps transparency. The upload returns the key; the logo appears on the site only once that key is saved in the clients draft (the Worker checks the object exists) and published. Logos that neither the draft nor the published copy uses are deleted after saves, publishes and resets, once they are over an hour old.
+- Placeholder client logos ship with the site in `public/placeholders/` (keys `placeholder/client-1.png` to `-4.png`), not in R2.
 - Replacing or removing an image deletes the old object.
 - Objects live in the `my-links-assets` bucket, bound to the Worker as `IMAGES` (see `wrangler.jsonc`). The frontend never talks to R2 directly.
 - Images are served by the Worker at `/media/<key>` with immutable caching, `nosniff` and a sandboxing CSP. Only keys matching the generated pattern can be fetched, so other objects in the bucket can't be read through this route.
@@ -198,6 +200,7 @@ The tests run inside `workerd` through `@cloudflare/vitest-plugin`, using the re
 - **HTML injection:** escaping of embedded data and meta tags, and the CSP.
 - **Analytics:** recording, bot filtering, the no-open-redirect rule, and the summary maths.
 - **R2:** upload, serving, cleanup of replaced images, and rejecting disguised, oversized or unknown files.
+- **Client strip:** placeholder clients in the draft only, logo uploads (GIF and SVG refused, 1 MB limit), name and key validation including keys that were never uploaded, publish/hide, no storage keys in public data, and cleanup of unused logos.
 - **Shared validation:** unit tests.
 
 ---

@@ -4,6 +4,9 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Added (pass 4: clients, share preview, QR)
+- "Worked with" client strip (migration `0008`): a row of client logos under your links on Home. In the Homepage tab you can add clients, rename them, upload or replace a logo, switch a client to name only, reorder, and remove. Names are the logos' alt text, and clients without a logo show their name. Logos are stored in R2 under `client-logo/` with the same server checks as photos (real type from the file's bytes, size limit), limited to PNG, JPEG and WebP up to 1 MB; no GIF or SVG. Unused logos are cleaned up automatically. Starts hidden, with five placeholder clients in the draft (four placeholder logos, one name only) until you add real ones.
+
 ### Changed (motion polish)
 - Page tabs: the highlight springs to the chosen tab and stretches slightly while it moves.
 - Story pop-up: grows out of the location you tapped and shrinks back into it when closed (Close, Esc, or tapping outside), instead of closing instantly.

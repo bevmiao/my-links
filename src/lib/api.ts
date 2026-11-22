@@ -10,7 +10,7 @@ import type {
   ProfileInput,
   PublicPageData,
 } from '../../shared/types'
-import type { ImageKind } from '../../shared/validation'
+import type { ProfileImageKind } from '../../shared/validation'
 
 export class ApiRequestError extends Error {
   status: number
@@ -60,12 +60,18 @@ export const adminApi = {
   me: () => request<AdminIdentity>('/api/admin/me'),
   getProfile: () => request<Profile>('/api/admin/profile'),
   saveProfile: (input: ProfileInput) => request<Profile>('/api/admin/profile', { method: 'PUT', body: json(input) }),
-  uploadImage: (kind: ImageKind, file: File) => {
+  uploadImage: (kind: ProfileImageKind, file: File) => {
     const form = new FormData()
     form.append('file', file)
     return request<Profile>(`/api/admin/images/${kind}`, { method: 'POST', body: form })
   },
-  removeImage: (kind: ImageKind) => request<Profile>(`/api/admin/images/${kind}`, { method: 'DELETE' }),
+  /** Store a client logo in R2. It shows on the site only once saved in the clients draft and published. */
+  uploadClientLogo: (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return request<{ key: string; url: string }>('/api/admin/images/client-logo', { method: 'POST', body: form })
+  },
+  removeImage: (kind: ProfileImageKind) => request<Profile>(`/api/admin/images/${kind}`, { method: 'DELETE' }),
   listLinks: () => request<Link[]>('/api/admin/links'),
   createLink: (input: LinkInput) => request<Link>('/api/admin/links', { method: 'POST', body: json(input) }),
   updateLink: (id: number, input: Partial<LinkInput>) =>
@@ -89,6 +95,7 @@ export interface HomepageSectionBody {
   'open-to': { sentence: HomepageContent['openTo'] }
   story: HomepageContent['story']
   videos: { items: HomepageContent['videos'] }
+  clients: { items: HomepageContent['clients'] }
   sections: { items: HomepageContent['sections'] }
 }
 export type HomepageSectionRoute = keyof HomepageSectionBody

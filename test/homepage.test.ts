@@ -18,8 +18,8 @@ const publicData = async () => (await (await call(`${PUBLIC}/api/profile`)).json
 const put = (section: string, json: unknown) => adminCall(token, `/api/admin/homepage/${section}`, { method: 'PUT', json })
 /** Sections with stored settings from earlier migrations, in their stored order. */
 const STORED_KEYS = ['intro', 'story', 'skills', 'opportunities', 'contact', 'testimonials']
-/** Every section. 'videos' (0007) has no stored row yet, so it is added at the end, hidden. */
-const ALL_KEYS = [...STORED_KEYS, 'videos']
+/** Every section. 'videos' (0007) and 'clients' (0008) have no stored row yet, so they are added at the end, hidden. */
+const ALL_KEYS = [...STORED_KEYS, 'videos', 'clients']
 
 // Tests in this file run in order and share one isolated database.
 describe('homepage draft / publish', () => {
@@ -125,8 +125,8 @@ describe('homepage draft / publish', () => {
   })
 
   it('omits hidden sections from the public data completely', async () => {
-    const order = ['contact', 'intro', 'story', 'skills', 'opportunities', 'testimonials', 'videos']
-    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' && key !== 'story' && key !== 'videos' })) })
+    const order = ['contact', 'intro', 'story', 'skills', 'opportunities', 'testimonials', 'videos', 'clients']
+    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' && key !== 'story' && key !== 'videos' && key !== 'clients' })) })
     await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
     const home = (await publicData()).homepage!
     expect(home.sections.map((s) => s.key)).toEqual(['contact', 'intro', 'opportunities', 'testimonials'])
@@ -144,8 +144,8 @@ describe('homepage draft / publish', () => {
     const saved = await put('videos', { items: videos })
     expect(saved.status).toBe(200)
     expect(((await saved.json()) as HomepageAdminState).draft.videos).toEqual(videos)
-    const order = ['contact', 'intro', 'story', 'skills', 'opportunities', 'videos', 'testimonials']
-    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' && key !== 'story' })) })
+    const order = ['contact', 'intro', 'story', 'skills', 'opportunities', 'videos', 'testimonials', 'clients']
+    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' && key !== 'story' && key !== 'clients' })) })
     expect(JSON.stringify(await publicData())).not.toContain('dQw4w9WgXcQ') // draft only
 
     await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
@@ -154,7 +154,7 @@ describe('homepage draft / publish', () => {
     expect(home.sections.find((s) => s.key === 'videos')).toEqual({ key: 'videos', items: videos })
 
     // Hiding the section removes the videos from the public data entirely.
-    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'videos' })) })
+    await put('sections', { items: order.map((key) => ({ key, visible: key !== 'videos' && key !== 'clients' })) })
     await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
     expect(JSON.stringify(await publicData())).not.toContain('dQw4w9WgXcQ')
   })
@@ -168,6 +168,7 @@ describe('homepage draft / publish', () => {
       'SELECT title, body FROM homepage_story WHERE state = ?',
       'SELECT label, sort_order FROM homepage_skills WHERE state = ? ORDER BY sort_order',
       'SELECT video_id, title, sort_order FROM homepage_videos WHERE state = ? ORDER BY sort_order',
+      'SELECT name, logo_key, sort_order FROM homepage_clients WHERE state = ? ORDER BY sort_order',
       'SELECT section_key, is_visible, sort_order FROM homepage_section_settings WHERE state = ? ORDER BY sort_order',
     ]
     for (const q of queries) expect(await rows(q, 'published')).toEqual(await rows(q, 'draft'))

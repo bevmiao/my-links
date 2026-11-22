@@ -1,6 +1,9 @@
 /** Admin API. Only reached after authenticateAdmin() succeeds (see worker/index.ts). */
 import type { AdminIdentity } from '../../shared/types'
 import {
+  CLIENT_LOGO_KEY,
+  clientLogoUrl,
+  validateClients,
   validateContact,
   validateIntro,
   validateOpenTo,
@@ -15,7 +18,7 @@ import { clampRange, getSummary } from '../lib/analytics'
 import * as db from '../lib/db'
 import * as hp from '../lib/homepage'
 import { errorResponse, HttpError, json, readJson } from '../lib/http'
-import { isImageKind, storeUpload } from '../lib/media'
+import { isProfileImageKind, pruneClientLogos, storeUpload } from '../lib/media'
 
 type Saver = (db: D1Database, body: unknown) => Promise<Record<string, string> | null>
 
@@ -38,6 +41,15 @@ const HOMEPAGE_SAVERS: Record<string, Saver> = {
   story: saver(validateStory, hp.saveStoryDraft),
   videos: saver(validateVideos, hp.saveVideosDraft),
   sections: saver(validateSections, hp.saveSectionsDraft),
+}
+
+/** Remove client logos no copy of the homepage uses any more. Never fails the request. */
+async function pruneLogos(env: Env) {
+  try {
+    await pruneClientLogos(env.IMAGES, await hp.clientLogoKeysInUse(env.DB))
+  } catch (e) {
+    console.error('client logo cleanup failed', e)
+  }
 }
 
 function parseId(raw: string): number {
@@ -73,10 +85,17 @@ export async function handleAdminApi(request: Request, env: Env, ctx: ExecutionC
   }
 
   /* ---------- Images (R2) ---------- */
+  // Client logos: stored on upload and returned as { key, url }. A logo only appears on the site
+  // once its key is saved in the clients draft and published. Unused uploads are pruned later.
+  if (path === '/images/client-logo' && method === 'POST') {
+    const key = await storeUpload(env.IMAGES, 'client-logo', request)
+    return json({ key, url: clientLogoUrl(key) }, { status: 201 })
+  }
+
   const img = path.match(/^\/images\/([a-z]+)$/)
   if (img) {
     const kind = img[1]
-    if (!isImageKind(kind)) return errorResponse(404, 'Unknown image type')
+    if (!isProfileImageKind(kind)) return errorResponse(404, 'Unknown image type')
     if (method === 'POST') {
       const key = await storeUpload(env.IMAGES, kind, request)
       const previous = await db.getImageKey(env.DB, kind)
@@ -152,10 +171,29 @@ export async function handleAdminApi(request: Request, env: Env, ctx: ExecutionC
 
   if (path === '/homepage/publish' && method === 'POST') {
     await hp.publishHomepage(env.DB)
+    ctx.waitUntil(pruneLogos(env))
     return json(await hp.getHomepageAdminState(env.DB))
   }
   if (path === '/homepage/discard' && method === 'POST') {
     await hp.discardHomepageDraft(env.DB)
+    ctx.waitUntil(pruneLogos(env))
+    return json(await hp.getHomepageAdminState(env.DB))
+  }
+
+  if (path === '/homepage/clients' && method === 'PUT') {
+    const result = validateClients(await readJson(request, 64 * 1024))
+    if (!result.ok) return errorResponse(422, 'Please fix the highlighted fields', result.fields)
+    // Uploaded logos must really exist in R2, so a stale or made-up key can't leave a broken image.
+    const missing: Record<string, string> = {}
+    await Promise.all(
+      result.value.map(async (c, i) => {
+        if (c.logoKey && CLIENT_LOGO_KEY.test(c.logoKey) && !(await env.IMAGES.head(c.logoKey)))
+          missing[`items.${i}.logoKey`] = 'That logo is missing. Upload it again.'
+      }),
+    )
+    if (Object.keys(missing).length) return errorResponse(422, 'Please fix the highlighted fields', missing)
+    await hp.saveClientsDraft(env.DB, result.value)
+    ctx.waitUntil(pruneLogos(env))
     return json(await hp.getHomepageAdminState(env.DB))
   }
 
