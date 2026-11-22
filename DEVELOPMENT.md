@@ -91,7 +91,7 @@ Never run these with `--env` omitted when you mean dev. Omitting `--env` targets
 
 ## 5. Production (approval required)
 
-A copy of the live site from before Part One exists: git tag `live-before-part-one` and `backups/live-before-part-one-2026-11-22/` (local only, see its README for how to look at it or roll back).
+Part One went live on 2026-11-22 (Worker version `4786094f`, migrations 0001–0007). A copy of the live site from before Part One exists: git tag `live-before-part-one` and `backups/live-before-part-one-2026-11-22/` (local only, see its README for how to look at it or roll back).
 
 Production deploys are not part of routine development. Only after explicit approval:
 
