@@ -87,15 +87,16 @@ npm run dev                       # http://localhost:5173
 
 ## Database (D1)
 
-Schema: `migrations/0001_initial_schema.sql`, `0002_add_homepage_sections.sql`, `0003_add_link_categories.sql`
+Schema: `migrations/0001_initial_schema.sql`, `0002_add_homepage_sections.sql`, `0003_add_link_categories.sql`, `0004_add_homepage_open_to.sql`
 
 | Table | Purpose |
 |---|---|
 | `profiles` | Exactly one row (`id = 1`): name, username, bio, R2 image keys, theme mode, colours, link style, socials (JSON) |
 | `links` | title, url, description, icon, `category`, `is_active`, `sort_order`, timestamps |
 | `analytics_events` | one row per view or click: `type`, `link_id`, referrer hostname, country, device class, UTC timestamp |
-| `homepage_intro`, `homepage_contact` | About me and contact/professional links. One `draft` and one `published` row each |
-| `homepage_skills`, `homepage_experience`, `homepage_opportunities`, `homepage_sections` | Ordered rows tagged `draft` or `published` |
+| `homepage_intro`, `homepage_contact`, `homepage_open_to` | Headline and About, Say hi details, and the one-sentence line. One `draft` and one `published` row each |
+| `homepage_skills`, `homepage_sections` | Ordered rows tagged `draft` or `published` |
+| `homepage_experience`, `homepage_opportunities` | Retired; kept so no data is deleted |
 
 **Homepage draft and publish.** The dashboard's Homepage tab saves to the `draft` rows. **Publish** copies every draft table to its `published` copy in one atomic batch. The public site only ever reads `published` rows, and hidden sections are removed before data leaves the Worker. Migration 0002 inserts placeholder content as drafts only, so applying it changes nothing publicly.
 

@@ -63,24 +63,27 @@ export interface PublicPageData {
 
 /* ---------------- Homepage sections (draft / publish) ---------------- */
 
-export const SECTION_KEYS = ['intro', 'experience', 'skills', 'opportunities', 'contact', 'testimonials'] as const
+/**
+ * 'opportunities' is the one-sentence "what I'm up for" section (the key predates the redesign and
+ * is fixed by a CHECK constraint). 'experience' was removed in pass 1b; any stored row for it is ignored.
+ */
+export const SECTION_KEYS = ['intro', 'skills', 'opportunities', 'contact', 'testimonials'] as const
 export type SectionKey = (typeof SECTION_KEYS)[number]
 
 export interface HomepageIntro {
+  /** Short line shown under the name. */
   headline: string
-  intro: string
+  /** A few sentences in the owner's own words. */
   about: string
-  background: string
-  interests: string[]
 }
 
+/**
+ * Contact details. LinkedIn lives in the social icons, not here. (The table also has phone,
+ * LinkedIn, and resume columns from pass 1; they are unused and kept to avoid deleting data.)
+ */
 export interface HomepageContact {
   email: string
-  phone: string
   location: string
-  linkedinUrl: string
-  /** Link to a hosted resume (for example a Google Drive file). Never an upload. */
-  resumeUrl: string
   portfolioUrl: string
   /** Show the portfolio as "coming soon" instead of a live link. */
   portfolioComingSoon: boolean
@@ -88,18 +91,6 @@ export interface HomepageContact {
 
 export interface SkillItem {
   label: string
-}
-
-export interface ExperienceItem {
-  role: string
-  organization: string
-  period: string
-  description: string
-}
-
-export interface OpportunityItem {
-  title: string
-  description: string
 }
 
 export interface SectionSetting {
@@ -112,8 +103,8 @@ export interface HomepageContent {
   intro: HomepageIntro
   contact: HomepageContact
   skills: SkillItem[]
-  experience: ExperienceItem[]
-  opportunities: OpportunityItem[]
+  /** One sentence about what the owner is up for (shown in the 'opportunities' section). */
+  openTo: string
   /** Every section key exactly once, in display order. */
   sections: SectionSetting[]
 }
@@ -129,9 +120,8 @@ export interface HomepageAdminState {
 /** Public shape: only visible, non-empty sections, in order. Hidden content is never included. */
 export type PublicSection =
   | { key: 'intro'; intro: HomepageIntro }
-  | { key: 'experience'; items: ExperienceItem[] }
   | { key: 'skills'; items: SkillItem[] }
-  | { key: 'opportunities'; items: OpportunityItem[] }
+  | { key: 'opportunities'; sentence: string }
   | { key: 'contact'; contact: HomepageContact }
   | { key: 'testimonials' }
 

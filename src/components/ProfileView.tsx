@@ -101,7 +101,7 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pre
           {groupLinks(links).map((group) => (
             <div key={group.category || '__ungrouped'} className="flex flex-col gap-3">
               {group.category ? (
-                <h2 className="text-center text-(length:--p-text-heading) font-semibold tracking-wider text-(--p-muted) uppercase">
+                <h2 className="text-center text-(length:--p-text-small) font-medium text-(--p-muted)">
                   {group.category}
                 </h2>
               ) : null}

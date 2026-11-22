@@ -2,9 +2,8 @@
 import type { AdminIdentity } from '../../shared/types'
 import {
   validateContact,
-  validateExperience,
   validateIntro,
-  validateOpportunities,
+  validateOpenTo,
   validateSections,
   validateSkills,
 } from '../../shared/homepage'
@@ -33,8 +32,7 @@ const HOMEPAGE_SAVERS: Record<string, Saver> = {
   intro: saver(validateIntro, hp.saveIntroDraft),
   contact: saver(validateContact, hp.saveContactDraft),
   skills: saver(validateSkills, hp.saveSkillsDraft),
-  experience: saver(validateExperience, hp.saveExperienceDraft),
-  opportunities: saver(validateOpportunities, hp.saveOpportunitiesDraft),
+  'open-to': saver(validateOpenTo, hp.saveOpenToDraft),
   sections: saver(validateSections, hp.saveSectionsDraft),
 }
 
@@ -157,9 +155,9 @@ export async function handleAdminApi(request: Request, env: Env, ctx: ExecutionC
     return json(await hp.getHomepageAdminState(env.DB))
   }
 
-  const section = path.match(/^\/homepage\/([a-z]+)$/)
+  const section = path.match(/^\/homepage\/([a-z-]+)$/)
   if (section && method === 'PUT') {
-    const saver = HOMEPAGE_SAVERS[section[1]]
+    const saver = Object.hasOwn(HOMEPAGE_SAVERS, section[1]) ? HOMEPAGE_SAVERS[section[1]] : undefined
     if (!saver) return errorResponse(404, 'Unknown section')
     const body = await readJson(request, 64 * 1024)
     const fields = await saver(env.DB, body)

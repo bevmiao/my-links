@@ -16,6 +16,7 @@ afterAll(() => restoreFetch())
 const getState = async () => (await (await adminCall(token, '/api/admin/homepage')).json()) as HomepageAdminState
 const publicData = async () => (await (await call(`${PUBLIC}/api/profile`)).json()) as PublicPageData
 const put = (section: string, json: unknown) => adminCall(token, `/api/admin/homepage/${section}`, { method: 'PUT', json })
+const ALL_KEYS = ['intro', 'skills', 'opportunities', 'contact', 'testimonials']
 
 // Tests in this file run in order and share one isolated database.
 describe('homepage draft / publish', () => {
@@ -25,15 +26,11 @@ describe('homepage draft / publish', () => {
     expect(s.publishedAt).toBeNull()
     expect(s.hasUnpublishedChanges).toBe(true)
     expect(s.draft.intro.headline).toBeTruthy()
-    expect(s.draft.opportunities.map((o) => o.title)).toEqual([
-      'Employment',
-      'Collaborations',
-      'Networking',
-      'Freelance',
-      'Business',
-      'Creative partnerships',
-    ])
-    expect(s.draft.sections.map((x) => x.key)).toEqual(['intro', 'experience', 'skills', 'opportunities', 'contact', 'testimonials'])
+    expect(s.draft.intro.about).toMatch(/^I shoot photos and video/) // refreshed by migration 0004
+    expect(s.draft.openTo).toBe('Always up for freelance shoots, collabs, or just a coffee. Say hi!')
+    expect(s.draft.skills.length).toBeGreaterThan(0)
+    // Experience was removed; its stored section row is ignored.
+    expect(s.draft.sections.map((x) => x.key)).toEqual(ALL_KEYS)
 
     // Placeholder drafts are not public.
     expect((await publicData()).homepage).toBeNull()
@@ -42,16 +39,19 @@ describe('homepage draft / publish', () => {
   })
 
   it('validates each section on the server', async () => {
-    const bad = await put('contact', { email: 'not-an-email', linkedinUrl: 'javascript:alert(1)', resumeUrl: 'mailto:a@b.co', phone: '<b>' })
+    const bad = await put('contact', { email: 'not-an-email', portfolioUrl: 'javascript:alert(1)', portfolioComingSoon: 'yes' })
     expect(bad.status).toBe(422)
     const { fields } = (await bad.json()) as { fields: Record<string, string> }
-    expect(Object.keys(fields).sort()).toEqual(['email', 'linkedinUrl', 'phone', 'resumeUrl'])
+    expect(Object.keys(fields).sort()).toEqual(['email', 'portfolioComingSoon', 'portfolioUrl'])
 
     expect((await put('skills', { items: [{ label: '' }] })).status).toBe(422)
-    expect((await put('experience', { items: [{ role: 'x'.repeat(500) }] })).status).toBe(422)
+    expect((await put('open-to', { sentence: 'x'.repeat(201) })).status).toBe(422)
+    expect((await put('intro', { headline: 'x'.repeat(121), about: '' })).status).toBe(422)
     expect((await put('sections', { items: [{ key: 'intro', visible: true }] })).status).toBe(422) // must list every section
-    expect((await put('sections', { items: [{ key: 'admin', visible: true }] })).status).toBe(422)
-    expect((await put('unknown', {})).status).toBe(404)
+    expect((await put('sections', { items: [...ALL_KEYS, 'experience'].map((key) => ({ key, visible: true })) })).status).toBe(422)
+    expect((await put('experience', { items: [] })).status).toBe(404) // removed section
+    expect((await put('constructor', {})).status).toBe(404) // no prototype lookups
+    expect((await put('toString', {})).status).toBe(404)
   })
 
   it('blocks cross-origin writes and the public host entirely', async () => {
@@ -61,22 +61,19 @@ describe('homepage draft / publish', () => {
   })
 
   it('saves drafts without touching the public site, then publishes them', async () => {
-    const intro = { headline: 'Draft headline', intro: 'Hi there.', about: 'About me.', background: 'Background.', interests: ['Film', ' '] }
+    const intro = { headline: 'Draft headline', about: 'Hey, I take pictures.' }
     const res = await put('intro', intro)
     expect(res.status).toBe(200)
-    const saved = (await res.json()) as HomepageAdminState
-    expect(saved.draft.intro).toEqual({ ...intro, interests: ['Film'] }) // blank interests dropped
+    expect(((await res.json()) as HomepageAdminState).draft.intro).toEqual(intro)
 
     await put('contact', {
       email: 'me@example.com',
-      phone: '+1 (626) 555-0100',
       location: 'Pasadena',
-      linkedinUrl: 'linkedin.com/in/me',
-      resumeUrl: 'https://drive.google.com/file/d/abc/view',
       portfolioUrl: 'https://example.com/secret-placeholder',
       portfolioComingSoon: true,
     })
     await put('skills', { items: [{ label: 'Photography' }, { label: 'Editing' }] })
+    await put('open-to', { sentence: 'Up for coffee.' })
     expect((await publicData()).homepage).toBeNull() // still unpublished
 
     const pub = await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
@@ -86,16 +83,19 @@ describe('homepage draft / publish', () => {
     expect(state.publishedAt).toMatch(/Z$/)
 
     const home = (await publicData()).homepage!
-    const intoSection = home.sections.find((s) => s.key === 'intro')
-    expect(intoSection).toEqual({ key: 'intro', intro: { ...intro, interests: ['Film'] } })
-    const contact = home.sections.find((s) => s.key === 'contact')
-    expect(contact).toMatchObject({ contact: { linkedinUrl: 'https://linkedin.com/in/me', portfolioUrl: '' } }) // coming-soon URL hidden
+    expect(home.sections.map((s) => s.key)).toEqual(ALL_KEYS)
+    expect(home.sections.find((s) => s.key === 'intro')).toEqual({ key: 'intro', intro })
+    expect(home.sections.find((s) => s.key === 'opportunities')).toEqual({ key: 'opportunities', sentence: 'Up for coffee.' })
+    expect(home.sections.find((s) => s.key === 'contact')).toEqual({
+      key: 'contact',
+      contact: { email: 'me@example.com', location: 'Pasadena', portfolioUrl: '', portfolioComingSoon: true }, // coming-soon URL hidden
+    })
     expect(JSON.stringify(home)).not.toContain('secret-placeholder')
     expect(home.sections.find((s) => s.key === 'skills')).toEqual({ key: 'skills', items: [{ label: 'Photography' }, { label: 'Editing' }] })
   })
 
   it('keeps later draft edits private until the next publish', async () => {
-    await put('intro', { headline: 'Unpublished idea', intro: '', about: '', background: '', interests: [] })
+    await put('intro', { headline: 'Unpublished idea', about: '' })
     const s = await getState()
     expect(s.hasUnpublishedChanges).toBe(true)
     expect(JSON.stringify(await publicData())).not.toContain('Unpublished idea')
@@ -111,24 +111,29 @@ describe('homepage draft / publish', () => {
   })
 
   it('omits hidden sections from the public data completely', async () => {
-    const order = ['contact', 'intro', 'experience', 'skills', 'opportunities', 'testimonials']
+    const order = ['contact', 'intro', 'skills', 'opportunities', 'testimonials']
     await put('sections', { items: order.map((key) => ({ key, visible: key !== 'skills' })) })
     await adminCall(token, '/api/admin/homepage/publish', { method: 'POST' })
     const home = (await publicData()).homepage!
-    expect(home.sections.map((s) => s.key)).toEqual(['contact', 'intro', 'experience', 'opportunities', 'testimonials'])
+    expect(home.sections.map((s) => s.key)).toEqual(['contact', 'intro', 'opportunities', 'testimonials'])
     expect(JSON.stringify(home)).not.toContain('Photography')
   })
 
-  it('publishes atomically: every table matches the draft afterwards', async () => {
-    const rows = async (table: string, state: string) =>
-      (await env.DB.prepare(`SELECT * FROM ${table} WHERE state = ? ORDER BY sort_order`).bind(state).all()).results.map((row) => {
-        const rest: Record<string, unknown> = { ...row }
-        delete rest.id
-        delete rest.state
-        return rest
-      })
-    for (const table of ['homepage_skills', 'homepage_experience', 'homepage_opportunities', 'homepage_sections']) {
-      expect(await rows(table, 'published')).toEqual(await rows(table, 'draft'))
-    }
+  it('publishes atomically: every table in use matches the draft afterwards', async () => {
+    const rows = async (sql: string, state: string) => (await env.DB.prepare(sql).bind(state).all()).results
+    const queries = [
+      'SELECT headline, about FROM homepage_intro WHERE state = ?',
+      'SELECT email, location, portfolio_url, portfolio_coming_soon FROM homepage_contact WHERE state = ?',
+      'SELECT sentence FROM homepage_open_to WHERE state = ?',
+      'SELECT label, sort_order FROM homepage_skills WHERE state = ? ORDER BY sort_order',
+      'SELECT section_key, is_visible, sort_order FROM homepage_sections WHERE state = ? ORDER BY sort_order',
+    ]
+    for (const q of queries) expect(await rows(q, 'published')).toEqual(await rows(q, 'draft'))
+  })
+
+  it('never deletes the retired pass-1 data', async () => {
+    const n = async (table: string) => (await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first<{ n: number }>())!.n
+    expect(await n('homepage_experience')).toBeGreaterThan(0)
+    expect(await n('homepage_opportunities')).toBeGreaterThan(0)
   })
 })

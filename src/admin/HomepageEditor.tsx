@@ -1,18 +1,17 @@
-import { ArrowDown, ArrowUp, CircleDot, Plus, RotateCcw, Trash2, X } from 'lucide-react'
-import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { ArrowDown, ArrowUp, CircleDot, Plus, RotateCcw, X } from 'lucide-react'
+import { useState, type KeyboardEvent } from 'react'
 import {
   HOMEPAGE_LIMITS as L,
   SECTION_LABELS,
   validateContact,
-  validateExperience,
   validateIntro,
-  validateOpportunities,
+  validateOpenTo,
   validateSections,
   validateSkills,
 } from '../../shared/homepage'
 import type { HomepageAdminState, HomepageContent, SectionKey } from '../../shared/types'
 import { adminApi, ApiRequestError, type HomepageSectionRoute } from '../lib/api'
-import { changedParts } from './homepageParts'
+import { changedParts, ROUTE_FOR } from './homepageParts'
 import { PageTitle } from './ProfileEditor'
 import { Button, Card, cx, Field, Input, Modal, Switch, Textarea, useToast } from './ui'
 
@@ -28,17 +27,15 @@ const VALIDATORS: Record<HomepageSectionRoute, (b: unknown) => { ok: boolean; fi
   intro: validateIntro,
   contact: validateContact,
   skills: validateSkills,
-  experience: validateExperience,
-  opportunities: validateOpportunities,
+  'open-to': validateOpenTo,
 }
 
 const SECTION_HINTS: Record<SectionKey, string> = {
-  intro: 'Your intro, bio, background, and interests.',
-  experience: 'Roles and projects.',
-  skills: 'What you’re good at.',
-  opportunities: 'The kinds of work and connections you’re open to.',
-  contact: 'Email, phone, LinkedIn, resume, and portfolio.',
-  testimonials: 'A placeholder for now. Shows a short “coming soon” note.',
+  intro: 'A few sentences about you.',
+  skills: 'Tags.',
+  opportunities: 'One line about what you’re up for. Shows without a heading.',
+  contact: 'Email, location, and portfolio.',
+  testimonials: 'Placeholder for now. Shows “Coming soon.”',
 }
 
 export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
@@ -53,7 +50,7 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
 
   function patch<K extends keyof HomepageContent>(key: K, value: HomepageContent[K]) {
     setDraft({ ...draft, [key]: value })
-    setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !k.startsWith(`${routeFor(key)}.`))))
+    setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !k.startsWith(`${ROUTE_FOR[key]}.`))))
   }
 
   /** Validate and save every changed part. Returns the new server state, or null if something failed. */
@@ -93,12 +90,12 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
       } else if (kind === 'publish') {
         if (hasUnsaved && !(await saveDraft())) return
         onSaved(await adminApi.publishHomepage())
-        toast('Published! Your homepage is live.')
+        toast('Published. It’s live.')
       } else {
         onSaved(await adminApi.discardHomepageDraft())
         setErrors({})
         setConfirmRevert(false)
-        toast('Draft reset to the published version')
+        toast('Draft reset to what’s live')
       }
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Something went wrong', 'error')
@@ -111,10 +108,7 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
 
   return (
     <div className="space-y-6">
-      <PageTitle
-        title="Homepage"
-        description="Your story, experience, and how to reach you. Save drafts as you go and check the preview. Nothing goes public until you press Publish."
-      />
+      <PageTitle title="Homepage" description="Edit, check the preview, then publish. Drafts stay private." />
 
       <StatusBar
         state={state}
@@ -130,8 +124,7 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
         onRevert={() => setConfirmRevert(true)}
       />
 
-      {/* Sections: visibility and order */}
-      <Card title="Sections" description="Choose what shows on your homepage and in what order. Hidden sections stay saved but are never public.">
+      <Card title="Sections" description="Turn sections on or off and move them up or down.">
         <ul className="space-y-2">
           {draft.sections.map((s, i) => (
             <li
@@ -162,10 +155,14 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
         {errors['sections.items'] ? <p className="mt-2 text-xs text-red-600 dark:text-red-400">{errors['sections.items']}</p> : null}
       </Card>
 
-      {/* About me */}
-      <Card title="About me" description="Your photo and name come from the Profile tab. The headline shows under your name.">
+      <Card title="About" description="Your photo and name come from the Profile tab.">
         <div className="space-y-5">
-          <Field label="Headline" htmlFor="hp-headline" error={err('intro', 'headline')} counter={{ value: draft.intro.headline.length, max: L.headline }}>
+          <Field
+            label="Line under your name"
+            htmlFor="hp-headline"
+            error={err('intro', 'headline')}
+            counter={{ value: draft.intro.headline.length, max: L.headline }}
+          >
             <Input
               id="hp-headline"
               value={draft.intro.headline}
@@ -174,16 +171,13 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
               onChange={(e) => patch('intro', { ...draft.intro, headline: e.target.value })}
             />
           </Field>
-          <Field label="Short intro" htmlFor="hp-intro" error={err('intro', 'intro')} counter={{ value: draft.intro.intro.length, max: L.intro }} hint="One or two friendly sentences. It opens the About section.">
-            <Textarea
-              id="hp-intro"
-              rows={2}
-              value={draft.intro.intro}
-              invalid={!!err('intro', 'intro')}
-              onChange={(e) => patch('intro', { ...draft.intro, intro: e.target.value })}
-            />
-          </Field>
-          <Field label="Bio" htmlFor="hp-about" error={err('intro', 'about')} counter={{ value: draft.intro.about.length, max: L.about }}>
+          <Field
+            label="About you"
+            htmlFor="hp-about"
+            error={err('intro', 'about')}
+            counter={{ value: draft.intro.about.length, max: L.about }}
+            hint="A few sentences, the way you’d say it out loud."
+          >
             <Textarea
               id="hp-about"
               rows={5}
@@ -192,35 +186,35 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
               onChange={(e) => patch('intro', { ...draft.intro, about: e.target.value })}
             />
           </Field>
-          <Field
-            label="Professional background"
-            htmlFor="hp-background"
-            error={err('intro', 'background')}
-            counter={{ value: draft.intro.background.length, max: L.background }}
-          >
-            <Textarea
-              id="hp-background"
-              rows={4}
-              value={draft.intro.background}
-              invalid={!!err('intro', 'background')}
-              onChange={(e) => patch('intro', { ...draft.intro, background: e.target.value })}
-            />
-          </Field>
-          <TagEditor
-            label="Areas of interest"
-            id="hp-interests"
-            values={draft.intro.interests}
-            max={L.interests}
-            maxLength={L.interest}
-            placeholder="Add an interest and press Enter"
-            error={err('intro', 'interests') ?? firstError(errors, 'intro.interests.')}
-            onChange={(interests) => patch('intro', { ...draft.intro, interests })}
-          />
         </div>
       </Card>
 
-      {/* Contact and professional links */}
-      <Card title="Contact and links" description="Leave anything blank to hide it. LinkedIn is a plain link; nothing connects to your account.">
+      <Card title="Skills">
+        <TagEditor
+          label="Skills"
+          id="hp-skills"
+          values={draft.skills.map((s) => s.label)}
+          max={L.skills}
+          maxLength={L.skill}
+          placeholder="Add a skill and press Enter"
+          error={err('skills', 'items') ?? firstError(errors, 'skills.items.')}
+          onChange={(labels) => patch('skills', labels.map((label) => ({ label })))}
+        />
+      </Card>
+
+      <Card title={SECTION_LABELS.opportunities}>
+        <Field
+          label="One line"
+          htmlFor="hp-open-to"
+          error={err('open-to', 'sentence')}
+          counter={{ value: draft.openTo.length, max: L.openTo }}
+          hint="For example: Always up for freelance shoots, collabs, or just a coffee."
+        >
+          <Input id="hp-open-to" value={draft.openTo} invalid={!!err('open-to', 'sentence')} onChange={(e) => patch('openTo', e.target.value)} />
+        </Field>
+      </Card>
+
+      <Card title={SECTION_LABELS.contact} description="Leave anything blank to hide it. LinkedIn stays in your social icons.">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Email" htmlFor="hp-email" error={err('contact', 'email')}>
             <Input
@@ -234,16 +228,6 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
               onChange={(e) => patch('contact', { ...draft.contact, email: e.target.value })}
             />
           </Field>
-          <Field label="Phone (optional)" htmlFor="hp-phone" error={err('contact', 'phone')}>
-            <Input
-              id="hp-phone"
-              type="tel"
-              inputMode="tel"
-              value={draft.contact.phone}
-              invalid={!!err('contact', 'phone')}
-              onChange={(e) => patch('contact', { ...draft.contact, phone: e.target.value })}
-            />
-          </Field>
           <Field label="Location" htmlFor="hp-location" error={err('contact', 'location')}>
             <Input
               id="hp-location"
@@ -253,45 +237,23 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
               onChange={(e) => patch('contact', { ...draft.contact, location: e.target.value })}
             />
           </Field>
-          <Field label="LinkedIn profile" htmlFor="hp-linkedin" error={err('contact', 'linkedinUrl')}>
-            <UrlInput
-              id="hp-linkedin"
-              value={draft.contact.linkedinUrl}
-              invalid={!!err('contact', 'linkedinUrl')}
-              placeholder="linkedin.com/in/you"
-              onChange={(linkedinUrl) => patch('contact', { ...draft.contact, linkedinUrl })}
-            />
-          </Field>
           <div className="sm:col-span-2">
-            <Field
-              label="Resume link"
-              htmlFor="hp-resume"
-              error={err('contact', 'resumeUrl')}
-              hint="Paste a share link, for example from Google Drive. Set sharing to “Anyone with the link” so visitors can open it."
-            >
-              <UrlInput
-                id="hp-resume"
-                value={draft.contact.resumeUrl}
-                invalid={!!err('contact', 'resumeUrl')}
-                placeholder="drive.google.com/file/d/…/view"
-                onChange={(resumeUrl) => patch('contact', { ...draft.contact, resumeUrl })}
-              />
-            </Field>
-          </div>
-          <div className="sm:col-span-2">
-            <Field label="Portfolio link" htmlFor="hp-portfolio" error={err('contact', 'portfolioUrl')} hint="Your portfolio will be its own site. Until then, keep it marked as coming soon.">
-              <UrlInput
+            <Field label="Portfolio link" htmlFor="hp-portfolio" error={err('contact', 'portfolioUrl')}>
+              <Input
                 id="hp-portfolio"
                 value={draft.contact.portfolioUrl}
                 invalid={!!err('contact', 'portfolioUrl')}
                 placeholder="portfolio.example.com"
-                onChange={(portfolioUrl) => patch('contact', { ...draft.contact, portfolioUrl })}
+                inputMode="url"
+                autoCapitalize="off"
+                spellCheck={false}
+                onChange={(e) => patch('contact', { ...draft.contact, portfolioUrl: e.target.value })}
               />
             </Field>
             <div className="mt-3 flex items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-800">
               <div>
                 <p className="text-sm font-medium">Show as “Coming soon”</p>
-                <p className="text-xs text-zinc-500">Visitors see a badge instead of a link. The link above stays private.</p>
+                <p className="text-xs text-zinc-500">Visitors see a badge instead of a link.</p>
               </div>
               <Switch
                 checked={draft.contact.portfolioComingSoon}
@@ -303,105 +265,10 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
         </div>
       </Card>
 
-      {/* Skills */}
-      <Card title="Skills" description="Short labels work best. They show as tags.">
-        <TagEditor
-          label="Skills"
-          id="hp-skills"
-          values={draft.skills.map((s) => s.label)}
-          max={L.skills}
-          maxLength={L.skill}
-          placeholder="Add a skill and press Enter"
-          error={err('skills', 'items') ?? firstError(errors, 'skills.items.')}
-          onChange={(labels) => patch('skills', labels.map((label) => ({ label })))}
-        />
-      </Card>
-
-      {/* Experience */}
-      <Card
-        title="Experience"
-        description="Newest first usually reads best."
-        actions={
-          <Button
-            size="sm"
-            icon={<Plus size={14} />}
-            disabled={draft.experience.length >= L.experience}
-            onClick={() => patch('experience', [...draft.experience, { role: '', organization: '', period: '', description: '' }])}
-          >
-            Add
-          </Button>
-        }
-      >
-        <ItemList
-          empty="No experience added yet."
-          items={draft.experience}
-          label={(item, i) => item.role || `Entry ${i + 1}`}
-          onChange={(items) => patch('experience', items)}
-          error={err('experience', 'items')}
-          render={(item, i, update) => (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Role" htmlFor={`exp-role-${i}`} error={err('experience', `items.${i}.role`)}>
-                <Input id={`exp-role-${i}`} value={item.role} maxLength={L.role} invalid={!!err('experience', `items.${i}.role`)} onChange={(e) => update({ role: e.target.value })} />
-              </Field>
-              <Field label="Organisation" htmlFor={`exp-org-${i}`} error={err('experience', `items.${i}.organization`)}>
-                <Input id={`exp-org-${i}`} value={item.organization} maxLength={L.organization} onChange={(e) => update({ organization: e.target.value })} />
-              </Field>
-              <Field label="When" htmlFor={`exp-period-${i}`} error={err('experience', `items.${i}.period`)} hint="For example: 2021 – now">
-                <Input id={`exp-period-${i}`} value={item.period} maxLength={L.period} onChange={(e) => update({ period: e.target.value })} />
-              </Field>
-              <div className="sm:col-span-2">
-                <Field
-                  label="What I did"
-                  htmlFor={`exp-desc-${i}`}
-                  error={err('experience', `items.${i}.description`)}
-                  counter={{ value: item.description.length, max: L.experienceDescription }}
-                >
-                  <Textarea id={`exp-desc-${i}`} rows={3} value={item.description} onChange={(e) => update({ description: e.target.value })} />
-                </Field>
-              </div>
-            </div>
-          )}
-        />
-      </Card>
-
-      {/* Opportunities */}
-      <Card
-        title="Open to"
-        description="The kinds of opportunities you’re interested in. These six are placeholders: rename, remove, or add your own."
-        actions={
-          <Button
-            size="sm"
-            icon={<Plus size={14} />}
-            disabled={draft.opportunities.length >= L.opportunities}
-            onClick={() => patch('opportunities', [...draft.opportunities, { title: '', description: '' }])}
-          >
-            Add
-          </Button>
-        }
-      >
-        <ItemList
-          empty="Nothing here yet."
-          items={draft.opportunities}
-          label={(item, i) => item.title || `Item ${i + 1}`}
-          onChange={(items) => patch('opportunities', items)}
-          error={err('opportunities', 'items')}
-          render={(item, i, update) => (
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-              <Field label="Title" htmlFor={`opp-title-${i}`} error={err('opportunities', `items.${i}.title`)}>
-                <Input id={`opp-title-${i}`} value={item.title} maxLength={L.opportunityTitle} invalid={!!err('opportunities', `items.${i}.title`)} onChange={(e) => update({ title: e.target.value })} />
-              </Field>
-              <Field label="Short description" htmlFor={`opp-desc-${i}`} error={err('opportunities', `items.${i}.description`)}>
-                <Input id={`opp-desc-${i}`} value={item.description} maxLength={L.opportunityDescription} onChange={(e) => update({ description: e.target.value })} />
-              </Field>
-            </div>
-          )}
-        />
-      </Card>
-
       <Modal
         open={confirmRevert}
         onClose={() => setConfirmRevert(false)}
-        title="Go back to the published version?"
+        title="Go back to what’s live?"
         footer={
           <>
             <Button variant="ghost" onClick={() => setConfirmRevert(false)}>
@@ -414,15 +281,11 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
         }
       >
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Your saved draft will be replaced with what’s live on your homepage right now. Your public page doesn’t change.
+          Your saved draft gets replaced with what’s live right now. The public page doesn’t change.
         </p>
       </Modal>
     </div>
   )
-}
-
-function routeFor(key: keyof HomepageContent): HomepageSectionRoute {
-  return key
 }
 
 function firstError(errors: Record<string, string>, prefix: string) {
@@ -459,12 +322,15 @@ function StatusBar({
 }) {
   let tone: 'live' | 'pending' | 'never'
   let text: string
-  if (!state.published) {
-    tone = 'never'
-    text = 'Not published yet. Visitors don’t see these sections.'
-  } else if (hasUnsaved || state.hasUnpublishedChanges) {
+  if (hasUnsaved) {
     tone = 'pending'
-    text = hasUnsaved ? 'You have unsaved edits.' : 'Draft saved. It isn’t public yet.'
+    text = 'Unsaved edits.'
+  } else if (!state.published) {
+    tone = 'never'
+    text = 'Not published yet.'
+  } else if (state.hasUnpublishedChanges) {
+    tone = 'pending'
+    text = 'Draft saved, not live yet.'
   } else {
     tone = 'live'
     text = `Live. Published ${formatWhen(state.publishedAt)}.`
@@ -529,21 +395,6 @@ function MoveButtons({ label, index, count, onMove }: { label: string; index: nu
   )
 }
 
-function UrlInput({ id, value, invalid, placeholder, onChange }: { id: string; value: string; invalid?: boolean; placeholder?: string; onChange: (v: string) => void }) {
-  return (
-    <Input
-      id={id}
-      value={value}
-      invalid={invalid}
-      placeholder={placeholder}
-      inputMode="url"
-      autoCapitalize="off"
-      spellCheck={false}
-      onChange={(e) => onChange(e.target.value)}
-    />
-  )
-}
-
 function TagEditor({
   label,
   id,
@@ -585,7 +436,10 @@ function TagEditor({
         {values.length ? (
           <ul className="flex flex-wrap gap-1.5" aria-label={label}>
             {values.map((v, i) => (
-              <li key={`${v}-${i}`} className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 py-0.5 pr-1 pl-3 text-[13px] dark:border-zinc-700 dark:bg-zinc-800">
+              <li
+                key={`${v}-${i}`}
+                className="inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-zinc-50 py-0.5 pr-1 pl-3 text-[13px] dark:border-zinc-700 dark:bg-zinc-800"
+              >
                 {v}
                 <button
                   type="button"
@@ -600,55 +454,21 @@ function TagEditor({
           </ul>
         ) : null}
         <div className="flex gap-2">
-          <Input id={id} value={text} maxLength={maxLength} disabled={full} placeholder={full ? 'That’s the maximum' : placeholder} onChange={(e) => setText(e.target.value)} onKeyDown={onKeyDown} onBlur={add} />
+          <Input
+            id={id}
+            value={text}
+            maxLength={maxLength}
+            disabled={full}
+            placeholder={full ? 'That’s the max' : placeholder}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={onKeyDown}
+            onBlur={add}
+          />
           <Button icon={<Plus size={14} />} onClick={add} disabled={full || !text.trim()}>
             Add
           </Button>
         </div>
       </div>
     </Field>
-  )
-}
-
-function ItemList<T>({
-  items,
-  empty,
-  label,
-  error,
-  onChange,
-  render,
-}: {
-  items: T[]
-  empty: string
-  label: (item: T, i: number) => string
-  error?: string
-  onChange: (items: T[]) => void
-  render: (item: T, i: number, update: (patch: Partial<T>) => void) => ReactNode
-}) {
-  if (!items.length) return <p className="py-4 text-center text-sm text-zinc-500">{empty}</p>
-  return (
-    <>
-      <ol className="space-y-4">
-        {items.map((item, i) => (
-          <li key={i} className="rounded-xl border border-zinc-200/80 p-4 dark:border-zinc-800">
-            <div className="mb-3 flex items-center gap-2">
-              <p className="min-w-0 flex-1 truncate text-[13px] font-semibold text-zinc-600 dark:text-zinc-300">{label(item, i)}</p>
-              <MoveButtons label={label(item, i)} index={i} count={items.length} onMove={(to) => onChange(move(items, i, to))} />
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Remove ${label(item, i)}`}
-                className="hover:text-red-600 dark:hover:text-red-400"
-                onClick={() => onChange(items.filter((_, j) => j !== i))}
-              >
-                <Trash2 size={14} />
-              </Button>
-            </div>
-            {render(item, i, (patch) => onChange(items.map((x, j) => (j === i ? { ...x, ...patch } : x))))}
-          </li>
-        ))}
-      </ol>
-      {error ? <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p> : null}
-    </>
   )
 }

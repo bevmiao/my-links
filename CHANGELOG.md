@@ -4,6 +4,9 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Changed
+- Homepage made personal rather than LinkedIn-style (migration `0004`): removed the Experience section, replaced the six "Open to" cards with one sentence, and trimmed Say hi to email, location, and the portfolio badge (LinkedIn stays in the social icons). About is now a few sentences. Plain headings instead of all-caps labels, including link category headings. Friendlier placeholder copy, applied only to drafts still holding the original placeholder. Retired tables are kept, not deleted. Route `PUT /api/admin/homepage/open-to` replaces `experience` and `opportunities`.
+
 ### Added
 - Homepage sections with draft / publish (migration `0002`): intro and about, contact and professional links (LinkedIn, resume link, portfolio "coming soon"), skills, experience, "open to" opportunity categories, a testimonials placeholder slot, and per-section visibility and order. Placeholder content ships as drafts only, so nothing changes publicly until you press Publish. API: `GET /api/admin/homepage`, `PUT /api/admin/homepage/{intro|contact|skills|experience|opportunities|sections}`, `POST /api/admin/homepage/publish`, `POST /api/admin/homepage/discard`. The public API returns only published, visible sections.
 - Public homepage sections below the links: About me, Experience, Skills, Open to, Contact (email, phone, location, LinkedIn, resume, and portfolio with a "Coming soon" badge), and a Testimonials placeholder. A headline shows under your name. Links with a category are grouped under a heading.
