@@ -1,5 +1,6 @@
 import { MapPin, X } from 'lucide-react'
 import { useEffect, useId, useRef } from 'react'
+import { SECTION_LABELS } from '../../shared/homepage'
 import type { HomepageStory } from '../../shared/types'
 
 /**
@@ -64,7 +65,7 @@ export function StoryDialog({
               </button>
             </div>
             <h2 id={titleId} className="mt-2 text-xl font-semibold tracking-tight text-balance">
-              {story.title || 'My story'}
+              {story.title || SECTION_LABELS.story}
             </h2>
             <p className="mt-3 text-(length:--p-text-body) leading-(--p-leading-body) whitespace-pre-line text-pretty text-(--p-fg)/85">
               {story.body}

@@ -136,7 +136,9 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
               <div key={pageKey}>
                 <p className="mb-2 text-xs font-semibold text-zinc-500">{PAGE_LABELS[pageKey]} page</p>
                 <ul className="space-y-2">
-                  {onPage.map(({ s, i }, pos) => (
+                  {onPage.map(({ s, i }, pos) => {
+                    const name = s.key === 'story' && draft.story.title.trim() ? draft.story.title : SECTION_LABELS[s.key]
+                    return (
                     <li
                       key={s.key}
                       className={cx(
@@ -145,22 +147,23 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
                       )}
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">{SECTION_LABELS[s.key]}</p>
+                        <p className="truncate text-sm font-medium">{name}</p>
                         <p className="truncate text-xs text-zinc-500">{SECTION_HINTS[s.key]}</p>
                       </div>
                       <MoveButtons
-                        label={SECTION_LABELS[s.key]}
+                        label={name}
                         index={pos}
                         count={onPage.length}
                         onMove={(to) => patch('sections', move(draft.sections, i, onPage[to].i))}
                       />
                       <Switch
                         checked={s.visible}
-                        label={s.visible ? `${SECTION_LABELS[s.key]} is shown. Click to hide.` : `${SECTION_LABELS[s.key]} is hidden. Click to show.`}
+                        label={s.visible ? `${name} is shown. Click to hide.` : `${name} is hidden. Click to show.`}
                         onChange={(visible) => patch('sections', draft.sections.map((x, j) => (j === i ? { ...x, visible } : x)))}
                       />
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
               </div>
             )
@@ -203,9 +206,12 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
         </div>
       </Card>
 
-      <Card title="My story" description="Where you grew up and what it means to you. It shows on your About page, and pops up when someone taps your location.">
+      <Card
+        title="My story"
+        description="Where you grew up and what it means to you. It shows on your About page and pops up when someone taps your location. The title is the heading visitors see, so name it whatever you like."
+      >
         <div className="space-y-5">
-          <Field label="Title" htmlFor="hp-story-title" error={err('story', 'title')} counter={{ value: draft.story.title.length, max: L.storyTitle }}>
+          <Field label="Title (shown as the heading)" htmlFor="hp-story-title" error={err('story', 'title')} counter={{ value: draft.story.title.length, max: L.storyTitle }}>
             <Input
               id="hp-story-title"
               value={draft.story.title}

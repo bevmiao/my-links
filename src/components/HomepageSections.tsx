@@ -159,12 +159,12 @@ function Contact({ contact, story, preview }: { contact: HomepageContact; story:
               <button type="button" onClick={() => setStoryOpen(true)} className={`${row} ${interactive}`} aria-haspopup="dialog">
                 <MapPin size={18} className={icon} aria-hidden="true" />
                 <span>{contact.location}</span>
-                <span className="ml-1 inline-flex items-center gap-2 rounded-(--p-radius-chip) border border-(--p-border) px-2.5 py-0.5 text-(length:--p-text-small) font-medium text-(--p-muted) transition group-hover:border-[color-mix(in_srgb,var(--p-accent)_45%,transparent)] group-hover:text-(--p-accent)">
-                  <span className="relative flex size-2" aria-hidden="true">
+                <span className="ml-1 inline-flex min-w-0 items-center gap-2 rounded-(--p-radius-chip) border border-(--p-border) px-2.5 py-0.5 text-(length:--p-text-small) font-medium text-(--p-muted) transition group-hover:border-[color-mix(in_srgb,var(--p-accent)_45%,transparent)] group-hover:text-(--p-accent)">
+                  <span className="relative flex size-2 shrink-0" aria-hidden="true">
                     <span className="absolute inline-flex size-full animate-ping-soft rounded-full bg-(--p-accent)" />
                     <span className="relative inline-flex size-2 rounded-full bg-(--p-accent)" />
                   </span>
-                  My story
+                  <span className="max-w-[14rem] truncate">{story.title || SECTION_LABELS.story}</span>
                 </span>
               </button>
               <StoryDialog story={story} location={contact.location} open={storyOpen} onClose={() => setStoryOpen(false)} />

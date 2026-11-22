@@ -7,7 +7,7 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 ### Added (pass 2)
 - Separate pages: Home (`/`), About (`/about`), and Work (`/work`), with an animated tab bar. Each page is served with embedded data, its own title, and its own canonical URL.
 - Wider layout on computers: two columns with your photo, name, and icons pinned on the left. Phones keep one column. Layout follows the page's own width (container queries), so the dashboard preview shows the phone version.
-- "My story" (migration `0005`): a story about where you grew up, on the About page with a Read more expander, and in a pop-up card when visitors tap your location.
+- "My story" (migration `0005`): a story about where you grew up, on the About page with a Read more expander, and in a pop-up card when visitors tap your location. Its title is fully editable and is used everywhere visitors see it: the About heading, the tag next to your location, and the pop-up.
 - Lively motion and texture: scroll-in reveals, page transitions, a floating avatar with a turning halo, drifting background light, word-by-word lines, a shine sweep on link cards, springy hover and tap effects, and animated film grain. Reduced-motion visitors get none of it.
 
 ### Changed
