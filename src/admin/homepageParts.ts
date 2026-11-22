@@ -1,0 +1,20 @@
+import type { HomepageContent } from '../../shared/types'
+import type { HomepageSectionBody, HomepageSectionRoute } from '../lib/api'
+
+/** Route name and request body for each separately saved part of the homepage draft. */
+export const HOMEPAGE_PARTS: {
+  route: HomepageSectionRoute
+  body: (d: HomepageContent) => HomepageSectionBody[HomepageSectionRoute]
+}[] = [
+  { route: 'sections', body: (d) => ({ items: d.sections }) },
+  { route: 'intro', body: (d) => d.intro },
+  { route: 'contact', body: (d) => d.contact },
+  { route: 'skills', body: (d) => ({ items: d.skills }) },
+  { route: 'experience', body: (d) => ({ items: d.experience }) },
+  { route: 'opportunities', body: (d) => ({ items: d.opportunities }) },
+]
+
+/** Parts whose local edits differ from the saved draft. */
+export function changedParts(saved: HomepageContent, draft: HomepageContent) {
+  return HOMEPAGE_PARTS.filter((p) => JSON.stringify(p.body(saved)) !== JSON.stringify(p.body(draft)))
+}

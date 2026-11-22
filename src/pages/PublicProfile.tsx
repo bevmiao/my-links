@@ -51,7 +51,7 @@ function ProfilePage({ data }: { data: PublicPageData }) {
   useEffect(() => {
     document.documentElement.style.backgroundColor = mode === 'dark' ? data.profile.backgroundDark : data.profile.backgroundLight
   }, [mode, data.profile.backgroundDark, data.profile.backgroundLight])
-  return <ProfileView profile={data.profile} links={data.links} mode={mode} onToggleTheme={toggle} />
+  return <ProfileView profile={data.profile} links={data.links} homepage={data.homepage} mode={mode} onToggleTheme={toggle} />
 }
 
 function Skeleton() {

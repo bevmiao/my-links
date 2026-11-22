@@ -1,6 +1,7 @@
-import { BarChart3, ExternalLink, Eye, Link2, Palette, ShieldAlert, UserRound } from 'lucide-react'
+import { BarChart3, ExternalLink, Eye, House, Link2, Palette, ShieldAlert, UserRound } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { AdminIdentity, Link, Profile, ProfileInput } from '../../shared/types'
+import { toPublicHomepage } from '../../shared/homepage'
+import type { AdminIdentity, HomepageAdminState, HomepageContent, Link, Profile, ProfileInput } from '../../shared/types'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { adminApi, ApiRequestError } from '../lib/api'
 import { RouterLink } from '../components/RouterLink'
@@ -8,6 +9,8 @@ import { navigate, usePathname } from '../lib/router'
 import { useThemeMode } from '../lib/theme'
 import { Analytics } from './Analytics'
 import { AppearanceEditor } from './AppearanceEditor'
+import { HomepageEditor } from './HomepageEditor'
+import { changedParts } from './homepageParts'
 import { LinkManager } from './LinkManager'
 import { LivePreview } from './LivePreview'
 import { ProfileEditor } from './ProfileEditor'
@@ -15,6 +18,7 @@ import { Button, cx, Modal, ToastProvider, useToast } from './ui'
 
 const NAV = [
   { href: '/admin', label: 'Profile', Icon: UserRound },
+  { href: '/admin/homepage', label: 'Homepage', Icon: House },
   { href: '/admin/links', label: 'Links', Icon: Link2 },
   { href: '/admin/appearance', label: 'Appearance', Icon: Palette },
   { href: '/admin/analytics', label: 'Analytics', Icon: BarChart3 },
@@ -63,17 +67,31 @@ function Dashboard({ theme }: { theme: ReturnType<typeof useThemeMode> }) {
   const [saving, setSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [previewOpen, setPreviewOpen] = useState(false)
+  // Homepage sections: server state (saved draft + published) and local, unsaved edits.
+  const [homepage, setHomepage] = useState<HomepageAdminState | null>(null)
+  const [homeDraft, setHomeDraft] = useState<HomepageContent | null>(null)
+  const [homepageError, setHomepageError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
         const me = await adminApi.me()
-        const [profile, links] = await Promise.all([adminApi.getProfile(), adminApi.listLinks()])
+        const [profile, links, home] = await Promise.all([
+          adminApi.getProfile(),
+          adminApi.listLinks(),
+          // The rest of the dashboard still works if this fails (e.g. migration 0002 not applied yet).
+          adminApi.getHomepage().catch((e: unknown) => (e instanceof Error ? e : new Error('Failed to load'))),
+        ])
         if (cancelled) return
         setSaved(profile)
         setDraft(profile)
         setLinks(links)
+        if (home instanceof Error) setHomepageError(home.message)
+        else {
+          setHomepage(home)
+          setHomeDraft(home.draft)
+        }
         setState({ status: 'ready', me })
       } catch (e) {
         if (cancelled) return
@@ -92,12 +110,20 @@ function Dashboard({ theme }: { theme: ReturnType<typeof useThemeMode> }) {
     [saved, draft],
   )
 
+  const homeDirty = !!homepage && !!homeDraft && changedParts(homepage.draft, homeDraft).length > 0
+  const previewHomepage = useMemo(() => (homeDraft ? toPublicHomepage(homeDraft) : null), [homeDraft])
+
+  const onHomepageSaved = useCallback((s: HomepageAdminState) => {
+    setHomepage(s)
+    setHomeDraft(s.draft)
+  }, [])
+
   useEffect(() => {
-    if (!dirty) return
+    if (!dirty && !homeDirty) return
     const onBeforeUnload = (e: BeforeUnloadEvent) => e.preventDefault()
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
-  }, [dirty])
+  }, [dirty, homeDirty])
 
   const updateDraft = useCallback((patch: Partial<Profile>) => {
     setDraft((d) => (d ? { ...d, ...patch } : d))
@@ -241,6 +267,18 @@ function Dashboard({ theme }: { theme: ReturnType<typeof useThemeMode> }) {
           {section === '/admin' && (
             <ProfileEditor draft={draft} onChange={updateDraft} errors={fieldErrors} onImageUpdated={applyImageUpdate} />
           )}
+          {section === '/admin/homepage' &&
+            (homepage && homeDraft ? (
+              <HomepageEditor state={homepage} draft={homeDraft} setDraft={setHomeDraft} onSaved={onHomepageSaved} />
+            ) : (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                <p className="font-medium">The homepage editor couldn’t load.</p>
+                <p className="mt-1">
+                  If this database hasn’t had the latest migrations applied yet, that’s expected. Ask for migration 0002 to be applied,
+                  then reload. {homepageError ? `(${homepageError})` : null}
+                </p>
+              </div>
+            ))}
           {section === '/admin/links' && <LinkManager links={links} setLinks={setLinks} />}
           {section === '/admin/appearance' && (
             <AppearanceEditor draft={draft} onChange={updateDraft} errors={fieldErrors} onImageUpdated={applyImageUpdate} />
@@ -251,7 +289,7 @@ function Dashboard({ theme }: { theme: ReturnType<typeof useThemeMode> }) {
         {section !== '/admin/analytics' ? (
           <aside className="hidden lg:block">
             <div className="sticky top-20">
-              <LivePreview profile={draft} links={links} />
+              <LivePreview profile={draft} links={links} homepage={previewHomepage} />
             </div>
           </aside>
         ) : null}
@@ -271,7 +309,7 @@ function Dashboard({ theme }: { theme: ReturnType<typeof useThemeMode> }) {
             <Eye size={16} aria-hidden="true" /> Preview
           </button>
           <Modal open={previewOpen} onClose={() => setPreviewOpen(false)} title="Live preview">
-            <LivePreview profile={draft} links={links} compact />
+            <LivePreview profile={draft} links={links} homepage={previewHomepage} compact />
           </Modal>
         </>
       ) : null}

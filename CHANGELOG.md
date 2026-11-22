@@ -6,6 +6,9 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ### Added
 - Homepage sections with draft / publish (migration `0002`): intro and about, contact and professional links (LinkedIn, resume link, portfolio "coming soon"), skills, experience, "open to" opportunity categories, a testimonials placeholder slot, and per-section visibility and order. Placeholder content ships as drafts only, so nothing changes publicly until you press Publish. API: `GET /api/admin/homepage`, `PUT /api/admin/homepage/{intro|contact|skills|experience|opportunities|sections}`, `POST /api/admin/homepage/publish`, `POST /api/admin/homepage/discard`. The public API returns only published, visible sections.
+- Public homepage sections below the links: About me, Experience, Skills, Open to, Contact (email, phone, location, LinkedIn, resume, and portfolio with a "Coming soon" badge), and a Testimonials placeholder. A headline shows under your name. Links with a category are grouped under a heading.
+- Dashboard **Homepage** tab: edit every section, show or hide and reorder sections, save drafts, preview unsaved edits in the live preview, publish, or reset the draft to the live version.
+- Design tokens for the public page (`src/index.css`, `--p-*`): width, radii, spacing, and type sizes. New components use them; colours still come from the owner's palette.
 - Link categories (migration `0003`): an optional category per link, editable in the link editor, with suggestions from existing categories.
 - Guarded dev deploy: `npm run deploy:dev:check` and `npm run deploy:dev` (`scripts/deploy-dev.mjs`). They build for dev and stop before uploading if the config or dry run names any production resource or hostname.
 - Development environment in `wrangler.jsonc` (`env.dev`): separate Worker (`my-links-dev`), D1 (`my-links-db-dev`), R2 (`my-links-assets-dev`), and dev hostnames.

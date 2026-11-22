@@ -39,6 +39,25 @@
   }
 }
 
+/*
+ * Public page design tokens. Colours come from the owner's palette (profilePalette() in
+ * src/lib/theme.ts, exposed as --p-bg, --p-fg, --p-accent, …). Shape, spacing, and type live
+ * here, so a later redesign is a token change rather than a component rewrite.
+ */
+:root {
+  --p-content-width: 580px;
+  --p-radius-card: 1rem;
+  --p-radius-inner: 0.75rem;
+  --p-radius-chip: 9999px;
+  --p-section-gap: 2.5rem;
+  --p-card-padding: 1.25rem;
+  --p-text-heading: 0.75rem;
+  --p-text-title: 0.9375rem;
+  --p-text-body: 0.9375rem;
+  --p-text-small: 0.8125rem;
+  --p-leading-body: 1.65;
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;

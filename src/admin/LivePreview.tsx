@@ -1,12 +1,23 @@
 import { Moon, Sun } from 'lucide-react'
 import { useState } from 'react'
-import type { Link, Profile } from '../../shared/types'
+import type { Link, Profile, PublicHomepage } from '../../shared/types'
 import { ProfileView } from '../components/ProfileView'
 import { resolveMode, type ResolvedMode } from '../lib/theme'
 import { cx } from './ui'
 
 /** Phone-framed render of the real public ProfileView, fed with unsaved draft data. */
-export function LivePreview({ profile, links, compact }: { profile: Profile; links: Link[]; compact?: boolean }) {
+export function LivePreview({
+  profile,
+  links,
+  homepage,
+  compact,
+}: {
+  profile: Profile
+  links: Link[]
+  /** Homepage sections from the current draft (including unsaved edits). */
+  homepage?: PublicHomepage | null
+  compact?: boolean
+}) {
   const [mode, setMode] = useState<ResolvedMode>(() => resolveMode(profile.themeMode))
   const visible = links
     .filter((l) => l.isActive)
@@ -43,7 +54,7 @@ export function LivePreview({ profile, links, compact }: { profile: Profile; lin
         )}
       >
         <div className="relative h-[min(680px,70dvh)] overflow-y-auto rounded-[1.7rem] [scrollbar-width:none]">
-          <ProfileView profile={profile} links={visible} mode={mode} preview />
+          <ProfileView profile={profile} links={visible} homepage={homepage} mode={mode} preview />
         </div>
       </div>
     </div>
