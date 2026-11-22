@@ -12,11 +12,14 @@ export function StoryDialog({
   location,
   open,
   onClose,
+  grain = true,
 }: {
   story: HomepageStory
   location: string
   open: boolean
   onClose: () => void
+  /** Follows the owner's film-grain setting. */
+  grain?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -43,7 +46,7 @@ export function StoryDialog({
     >
       {open ? (
         <div className="relative overflow-hidden rounded-(--p-radius-card)">
-          <div aria-hidden="true" className="grain absolute" />
+          {grain ? <div aria-hidden="true" className="grain absolute" /> : null}
           <div
             aria-hidden="true"
             className="pointer-events-none absolute -top-24 left-1/2 h-48 w-72 -translate-x-1/2 rounded-full blur-3xl"

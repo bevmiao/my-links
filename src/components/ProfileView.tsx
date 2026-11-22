@@ -84,7 +84,12 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pag
         className={`pointer-events-none inset-0 -z-10 ${preview ? 'absolute' : 'fixed'}`}
         style={{ background: 'radial-gradient(ellipse 85% 75% at 50% 45%, transparent 55%, var(--p-vignette))' }}
       />
-      <div aria-hidden="true" className={`grain z-50 ${preview ? 'absolute' : 'fixed'} animate-grain`} />
+      {profile.grain !== 'off' ? (
+        <div
+          aria-hidden="true"
+          className={`grain z-50 ${preview ? 'absolute' : 'fixed'} ${profile.grain === 'moving' ? 'animate-grain' : ''}`}
+        />
+      ) : null}
 
       <header className={`mx-auto flex w-full max-w-(--p-wide-width) items-center justify-between ${preview ? 'p-3' : 'p-4 sm:p-6'}`}>
         <ShareButton preview={preview} title={profile.displayName} />
@@ -121,7 +126,7 @@ export function ProfileView({ profile, links, homepage, mode, onToggleTheme, pag
             ) : page === 'home' ? (
               <HomeLinks links={links} profile={profile} preview={preview} empty={!sections.length} />
             ) : (
-              <PageSections sections={byPage(page)} preview={preview} />
+              <PageSections sections={byPage(page)} preview={preview} grain={profile.grain !== 'off'} />
             )}
           </div>
         </main>

@@ -2,7 +2,7 @@
  * Input validation shared by the Worker and the dashboard.
  * The Worker always re-validates — client-side use is only for friendlier form feedback.
  */
-import type { ButtonStyle, LinkInput, ProfileInput, SocialLink, ThemeMode } from './types'
+import type { ButtonStyle, GrainMode, LinkInput, ProfileInput, SocialLink, ThemeMode } from './types'
 
 export const LIMITS = {
   username: 32,
@@ -26,6 +26,7 @@ export const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'im
 
 export const THEME_MODES: ThemeMode[] = ['light', 'dark', 'system']
 export const BUTTON_STYLES: ButtonStyle[] = ['rounded', 'pill', 'square']
+export const GRAIN_MODES: GrainMode[] = ['moving', 'still', 'off']
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; fields: Record<string, string> }
 
@@ -133,6 +134,10 @@ export function validateProfileInput(body: unknown): ValidationResult<ProfileInp
   const themeMode = str(b.themeMode) as ThemeMode
   if (!THEME_MODES.includes(themeMode)) fields.themeMode = 'Choose light, dark or system.'
 
+  // Optional for older clients: missing means the default animated grain.
+  const grain = (b.grain === undefined ? 'moving' : str(b.grain)) as GrainMode
+  if (!GRAIN_MODES.includes(grain)) fields.grain = 'Choose moving, still or off.'
+
   const buttonStyle = str(b.buttonStyle) as ButtonStyle
   if (!BUTTON_STYLES.includes(buttonStyle)) fields.buttonStyle = 'Choose a button style.'
 
@@ -156,6 +161,7 @@ export function validateProfileInput(body: unknown): ValidationResult<ProfileInp
       bio,
       themeMode,
       buttonStyle,
+      grain,
       accentColor: colorValues.accentColor,
       backgroundLight: colorValues.backgroundLight,
       backgroundDark: colorValues.backgroundDark,

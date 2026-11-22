@@ -53,6 +53,7 @@ function toInput(p: Profile): ProfileInput {
     backgroundLight: p.backgroundLight,
     backgroundDark: p.backgroundDark,
     buttonStyle: p.buttonStyle,
+    grain: p.grain,
     socials: p.socials,
   }
 }

@@ -14,6 +14,7 @@ interface ProfileRow {
   background_light: string
   background_dark: string
   button_style: Profile['buttonStyle']
+  grain: Profile['grain']
   socials: string
   updated_at: string
 }
@@ -56,6 +57,7 @@ function toProfile(r: ProfileRow): Profile {
     backgroundLight: r.background_light,
     backgroundDark: r.background_dark,
     buttonStyle: r.button_style,
+    grain: r.grain,
     socials: parseSocials(r.socials),
     updatedAt: toIso(r.updated_at),
   }
@@ -88,7 +90,7 @@ export async function updateProfile(db: D1Database, input: ProfileInput): Promis
   await db
     .prepare(
       `UPDATE profiles SET username = ?, display_name = ?, bio = ?, theme_mode = ?, accent_color = ?,
-         background_light = ?, background_dark = ?, button_style = ?, socials = ?, updated_at = datetime('now')
+         background_light = ?, background_dark = ?, button_style = ?, grain = ?, socials = ?, updated_at = datetime('now')
        WHERE id = 1`,
     )
     .bind(
@@ -100,6 +102,7 @@ export async function updateProfile(db: D1Database, input: ProfileInput): Promis
       input.backgroundLight,
       input.backgroundDark,
       input.buttonStyle,
+      input.grain,
       JSON.stringify(input.socials),
     )
     .run()

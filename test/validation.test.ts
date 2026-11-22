@@ -43,6 +43,16 @@ describe('validateProfileInput', () => {
     const r = validateProfileInput(base)
     expect(r.ok && r.value).toMatchObject({ username: 'alex', accentColor: '#aabbcc', socials: [{ platform: 'github', url: 'https://github.com/alex' }] })
   })
+  it('defaults the film grain to moving and rejects unknown values', () => {
+    const r = validateProfileInput(base)
+    expect(r.ok && r.value.grain).toBe('moving') // older clients omit it
+    for (const grain of ['moving', 'still', 'off']) {
+      const ok = validateProfileInput({ ...base, grain })
+      expect(ok.ok && ok.value.grain).toBe(grain)
+    }
+    const bad = validateProfileInput({ ...base, grain: 'loud' })
+    expect(!bad.ok && bad.fields.grain).toBeTruthy()
+  })
   it('rejects bad colours, modes, usernames and socials', () => {
     const r = validateProfileInput({ ...base, username: 'a b', accentColor: 'red', themeMode: 'neon', socials: [{ platform: 'x', url: 'javascript:1' }] })
     expect(r.ok).toBe(false)

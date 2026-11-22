@@ -47,7 +47,7 @@ Directories:
 
 | Table | Purpose |
 |---|---|
-| `profiles` | Exactly one row (`id = 1`): display name, username, bio, R2 keys for avatar and background, theme mode, colours, button style, socials (JSON). |
+| `profiles` | Exactly one row (`id = 1`): display name, username, bio, R2 keys for avatar and background, theme mode, colours, button style, film grain (`moving` / `still` / `off`, migration 0006), socials (JSON). |
 | `links` | Title, url, description, icon, `is_active`, `sort_order`, timestamps. |
 | `analytics_events` | One row per view or click: type, link id (set null on delete), referrer hostname, country, device class, UTC timestamp. No IPs, cookies, or full user agents. |
 | `homepage_intro` | Headline (shown under the name) and a short About text. One row per `state`. Older columns (intro, background, interests) are unused. |
@@ -62,7 +62,7 @@ Directories:
 
 **Draft and publish.** Every `homepage_*` table stores a `'draft'` and a `'published'` copy, distinguished by the `state` column. The admin editor writes drafts. Publishing copies every draft table over its published copy in one D1 batch (`worker/lib/homepage.ts`). Public routes read only published rows, and `toPublicHomepage()` (`shared/homepage.ts`) removes hidden sections and the placeholder portfolio URL before anything leaves the Worker. Testimonials have no table yet: the section is a placeholder slot.
 
-Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds the homepage tables and placeholder **drafts only**, so applying it publishes nothing), `0003_add_link_categories.sql` (adds `links.category`), `0004_add_homepage_open_to.sql` (adds the one-sentence table and refreshes untouched placeholder drafts), and `0005_add_story_and_section_settings.sql` (adds the story and the new section-settings table, copying the old rows). 0001–0005 are applied locally and to `my-links-db-dev` (2026-11-21). **Not applied to production** (`my-links-db`). Apply them there before any production deploy of this code, or the public page will fail to load. Future changes go in `0006_*.sql` and up.
+Migrations: `0001_initial_schema.sql`, `0002_add_homepage_sections.sql` (adds the homepage tables and placeholder **drafts only**, so applying it publishes nothing), `0003_add_link_categories.sql` (adds `links.category`), `0004_add_homepage_open_to.sql` (adds the one-sentence table and refreshes untouched placeholder drafts), and `0005_add_story_and_section_settings.sql` (adds the story and the new section-settings table, copying the old rows). 0001–0005 are applied locally and to `my-links-db-dev` (2026-11-21). `0006_add_profile_grain.sql` (adds `profiles.grain`) is applied locally only. **Not applied to production** (`my-links-db`). Apply them there before any production deploy of this code, or the public page will fail to load. Future changes go in `0007_*.sql` and up.
 
 ## 5. API architecture
 

@@ -2,6 +2,8 @@
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type ButtonStyle = 'rounded' | 'pill' | 'square'
+/** Film grain on the public site: animated, a still texture, or none. */
+export type GrainMode = 'moving' | 'still' | 'off'
 
 export interface SocialLink {
   platform: string
@@ -21,6 +23,7 @@ export interface Profile {
   backgroundLight: string
   backgroundDark: string
   buttonStyle: ButtonStyle
+  grain: GrainMode
   socials: SocialLink[]
   updatedAt: string
 }

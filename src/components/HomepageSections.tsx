@@ -9,12 +9,12 @@ import { StoryDialog } from './StoryDialog'
  * The homepage sections that belong to one page (About or Work), in the owner's order.
  * Styling uses the public palette (--p-*) and the tokens in src/index.css.
  */
-export function PageSections({ sections, preview }: { sections: PublicSection[]; preview?: boolean }) {
+export function PageSections({ sections, preview, grain = true }: { sections: PublicSection[]; preview?: boolean; grain?: boolean }) {
   return (
     <div className="flex w-full flex-col gap-(--p-section-gap)">
       {sections.map((section, i) => (
         <Reveal key={section.key} delay={Math.min(i, 3) * 90} instant={preview}>
-          <Section section={section} preview={preview} />
+          <Section section={section} preview={preview} grain={grain} />
         </Reveal>
       ))}
     </div>
@@ -56,7 +56,7 @@ function Titled({ id, children, big }: { id: PublicSection['key']; children: Rea
   )
 }
 
-function Section({ section, preview }: { section: PublicSection; preview?: boolean }) {
+function Section({ section, preview, grain }: { section: PublicSection; preview?: boolean; grain?: boolean }) {
   switch (section.key) {
     case 'intro':
       // The headline is shown under the name; this section is just the words.
@@ -92,7 +92,7 @@ function Section({ section, preview }: { section: PublicSection; preview?: boole
     case 'contact':
       return (
         <Titled id="contact" big>
-          <Contact contact={section.contact} story={section.story} preview={preview} />
+          <Contact contact={section.contact} story={section.story} preview={preview} grain={grain} />
         </Titled>
       )
     case 'testimonials':
@@ -139,7 +139,17 @@ function StoryBlock({ story }: { story: HomepageStory }) {
   )
 }
 
-function Contact({ contact, story, preview }: { contact: HomepageContact; story: HomepageStory | null; preview?: boolean }) {
+function Contact({
+  contact,
+  story,
+  preview,
+  grain,
+}: {
+  contact: HomepageContact
+  story: HomepageStory | null
+  preview?: boolean
+  grain?: boolean
+}) {
   const [storyOpen, setStoryOpen] = useState(false)
   const portfolio = contact.portfolioComingSoon ? undefined : safeHref(contact.portfolioUrl)
   const row =
@@ -172,7 +182,7 @@ function Contact({ contact, story, preview }: { contact: HomepageContact; story:
                   <span className="max-w-[14rem] truncate">{story.title || SECTION_LABELS.story}</span>
                 </span>
               </button>
-              <StoryDialog story={story} location={contact.location} open={storyOpen} onClose={() => setStoryOpen(false)} />
+              <StoryDialog story={story} location={contact.location} open={storyOpen} onClose={() => setStoryOpen(false)} grain={grain} />
             </>
           ) : (
             <p className={row}>

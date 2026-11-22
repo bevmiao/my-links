@@ -4,6 +4,9 @@ All notable changes. Newest first. Format loosely follows Keep a Changelog.
 
 ## [Unreleased] — Part One (development)
 
+### Added (pass 3b)
+- Film grain setting in Appearance (migration `0006`): Moving (default, the current look), Still (texture without flicker), or Off. The story pop-up follows the same setting.
+
 ### Changed (pass 3: professional and cozy)
 - Warm serif for the name and headings (system serifs, no download) with Inter for body text. Body text is now 16px with a comfortable line length. Softer corners and more space between sections.
 - "Let's work!" uses an italic accent, and the one-sentence line is set in italic serif.

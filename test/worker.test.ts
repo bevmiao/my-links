@@ -101,6 +101,15 @@ describe('profile', () => {
     expect(after).toMatchObject({ displayName: 'Sam', username: 'sam', socials: [{ platform: 'github', url: 'https://github.com/sam' }] })
   })
 
+  it('stores the film grain setting and exposes it publicly', async () => {
+    const before = (await (await adminCall(token, '/api/admin/profile')).json()) as Profile
+    expect(before.grain).toBe('moving') // migration default keeps the current look
+    const res = await adminCall(token, '/api/admin/profile', { method: 'PUT', json: { ...before, grain: 'off' } })
+    expect(((await res.json()) as Profile).grain).toBe('off')
+    expect(((await (await call(`${PUBLIC}/api/profile`)).json()) as PublicPageData).profile.grain).toBe('off')
+    expect((await adminCall(token, '/api/admin/profile', { method: 'PUT', json: { ...before, grain: 'static' } })).status).toBe(422)
+  })
+
   it('requires JSON bodies', async () => {
     const res = await adminCall(token, '/api/admin/profile', { method: 'PUT', body: 'displayName=x', headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
     expect(res.status).toBe(415)

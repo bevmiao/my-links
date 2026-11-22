@@ -1,5 +1,5 @@
 import { Check, Coffee, Monitor, Moon, Sun } from 'lucide-react'
-import type { ButtonStyle, Profile, ThemeMode } from '../../shared/types'
+import type { ButtonStyle, GrainMode, Profile, ThemeMode } from '../../shared/types'
 import { COZY_PRESET } from '../lib/theme'
 import { ImageUploader } from './ImageUploader'
 import { PageTitle } from './ProfileEditor'
@@ -13,6 +13,12 @@ const MODES: { value: ThemeMode; label: string; Icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', Icon: Sun },
   { value: 'dark', label: 'Dark', Icon: Moon },
   { value: 'system', label: 'System', Icon: Monitor },
+]
+
+const GRAINS: { value: GrainMode; label: string; hint: string }[] = [
+  { value: 'moving', label: 'Moving', hint: 'Flickers like film' },
+  { value: 'still', label: 'Still', hint: 'Texture, no flicker' },
+  { value: 'off', label: 'Off', hint: 'Clean, no grain' },
 ]
 
 const STYLES: { value: ButtonStyle; label: string; radius: string }[] = [
@@ -121,6 +127,30 @@ export function AppearanceEditor({ draft, onChange, errors, onImageUpdated }: Pr
             </button>
           ))}
         </div>
+      </Card>
+
+      <Card title="Film grain" description="The film-style texture over your page.">
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Film grain">
+          {GRAINS.map(({ value, label, hint }) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={draft.grain === value}
+              onClick={() => onChange({ grain: value })}
+              className={cx(
+                'flex flex-col items-center gap-1 rounded-xl border px-3 py-4 text-sm font-medium transition',
+                draft.grain === value
+                  ? 'border-zinc-900 bg-zinc-50 dark:border-white dark:bg-zinc-800/60'
+                  : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-800 dark:hover:border-zinc-700',
+              )}
+            >
+              {label}
+              <span className="text-xs font-normal text-zinc-500">{hint}</span>
+            </button>
+          ))}
+        </div>
+        {errors.grain ? <p className="mt-2 text-xs text-red-600 dark:text-red-400">{errors.grain}</p> : null}
       </Card>
 
       <Card title="Background image" description="Optional. It’s softly dimmed with your theme colour so text stays readable.">
