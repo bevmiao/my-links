@@ -49,7 +49,7 @@ function groupLinks(links: PublicLink[]) {
  */
 export function ProfileView({ profile, links, homepage, mode, onToggleTheme, page = 'home', onNavigate, preview }: ProfileViewProps) {
   const palette = profilePalette(profile, mode)
-  // Client cards ("Worked with") always use the light-mode look: white card, dark text.
+  // Client cards ("Trusted by") always use the light-mode look: white card, dark text.
   const cardPalette = profilePalette(profile, 'light')
   const glowStrength = mode === 'dark' ? 24 : 15
   // With a background photo, skip the accent-coloured glows so the photo keeps its real colours.

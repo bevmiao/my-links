@@ -50,7 +50,7 @@ export const SECTION_LABELS: Record<SectionKey, string> = {
   videos: 'Videos',
   contact: 'Let’s work!',
   testimonials: 'Kind words',
-  clients: 'Worked with',
+  clients: 'Trusted by',
 }
 
 export const PAGE_LABELS: Record<PageKey, string> = { home: 'Home', about: 'About', work: 'Work' }

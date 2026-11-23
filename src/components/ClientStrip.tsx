@@ -6,10 +6,13 @@ import { tapSquish } from '../lib/motion'
 import { CloseButton, PopCard } from './PopCard'
 
 /**
- * "Worked with": a row of client logos, no tiles. Logos set to "one colour" are drawn in the
+ * "Trusted by": a row of client logos, no tiles. Logos set to "one colour" are drawn in the
  * page's text colour (the logo is used as a mask), so they read in light and dark mode alike.
  * Clients with details open into a card that grows out of the logo.
  */
+/** Strip logo height: as before on phones and tablets, bigger on computer screens (@4xl, 56rem+). */
+const STRIP_LOGO = 'h-11 @4xl:h-16'
+
 export function ClientStrip({ items, grain = true, cardPalette }: { items: PublicClient[]; grain?: boolean; cardPalette?: CSSProperties }) {
   const [active, setActive] = useState<{ index: number; from: DOMRect } | null>(null)
   const [open, setOpen] = useState(false)
@@ -20,11 +23,11 @@ export function ClientStrip({ items, grain = true, cardPalette }: { items: Publi
       <h2 id="section-clients" className="text-center text-(length:--p-text-small) font-medium text-(--p-muted) @4xl:text-left">
         {SECTION_LABELS.clients}
       </h2>
-      <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 @4xl:justify-start">
+      <ul className="mt-5 flex flex-wrap items-center justify-center gap-x-10 gap-y-6 @4xl:mt-6 @4xl:justify-start @4xl:gap-x-14 @4xl:gap-y-8">
         {items.map((c, i) => {
           // Same springy hover as the link cards and social icons: lift, grow a little, and tilt
           // (alternating left and right, like the skill chips).
-          const hover = `group grid min-h-14 place-items-center rounded-(--p-radius-inner) px-1.5 transition-no-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1.5 hover:scale-110 ${i % 2 ? 'hover:-rotate-2' : 'hover:rotate-2'}`
+          const hover = `group grid min-h-14 place-items-center @4xl:min-h-20 rounded-(--p-radius-inner) px-1.5 transition-no-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-1.5 hover:scale-110 ${i % 2 ? 'hover:-rotate-2' : 'hover:rotate-2'}`
           return (
           <li key={`${c.name}-${i}`}>
             {clientHasDetails(c) ? (
@@ -39,11 +42,11 @@ export function ClientStrip({ items, grain = true, cardPalette }: { items: Publi
                 }}
                 className={hover}
               >
-                <ClientLogo client={c} decorative lively />
+                <ClientLogo client={c} decorative lively size={STRIP_LOGO} />
               </m.button>
             ) : (
               <div className={`cursor-default ${hover}`}>
-                <ClientLogo client={c} lively />
+                <ClientLogo client={c} lively size={STRIP_LOGO} />
               </div>
             )}
           </li>
@@ -67,11 +70,13 @@ function ClientLogo({ client, decorative, lively, size = 'h-11' }: { client: Pub
   // drop-shadow (not box-shadow) follows the logo's own shape. It sits on the outer element so the
   // mask on the inner one doesn't cut it off.
   const glow = lively ? 'group-hover:drop-shadow-[0_6px_16px_color-mix(in_srgb,var(--p-accent)_55%,transparent)]' : ''
+  // The strip's logos may be wider on computer screens too; the pop-up card's stay as they are.
+  const maxW = size === STRIP_LOGO ? 'max-w-44 @4xl:max-w-60' : 'max-w-44'
   const label = decorative ? { 'aria-hidden': true as const } : { role: 'img', 'aria-label': client.name }
 
   if (!client.logoUrl || failed)
     return (
-      <span {...(decorative ? { 'aria-hidden': true } : {})} className={`font-display text-xl leading-tight font-medium text-balance ${tone} ${glow}`}>
+      <span {...(decorative ? { 'aria-hidden': true } : {})} className={`font-display text-xl leading-tight font-medium ${size === STRIP_LOGO ? '@4xl:text-2xl' : ''} text-balance ${tone} ${glow}`}>
         {client.name}
       </span>
     )
@@ -91,7 +96,7 @@ function ClientLogo({ client, decorative, lively, size = 'h-11' }: { client: Pub
     }
     return (
       <span {...label} className={`relative inline-block ${tone} ${glow}`}>
-        <img src={client.logoUrl} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} className={`invisible block w-auto max-w-44 object-contain ${size}`} />
+        <img src={client.logoUrl} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} className={`invisible block w-auto ${maxW} object-contain ${size}`} />
         <span aria-hidden="true" className="absolute inset-0 bg-current" style={mask} />
       </span>
     )
@@ -104,7 +109,7 @@ function ClientLogo({ client, decorative, lively, size = 'h-11' }: { client: Pub
       loading="lazy"
       decoding="async"
       onError={() => setFailed(true)}
-      className={`w-auto max-w-44 object-contain opacity-85 transition-[opacity,filter] duration-500 group-hover:opacity-100 ${glow} ${size}`}
+      className={`w-auto ${maxW} object-contain opacity-85 transition-[opacity,filter] duration-500 group-hover:opacity-100 ${glow} ${size}`}
     />
   )
 }

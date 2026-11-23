@@ -32,7 +32,7 @@ async function prepare(picked: File, kind: 'client-logo' | 'client-photo'): Prom
 }
 
 /**
- * The "Worked with" strip. Each client has a name (the logo's alt text), an optional logo, and
+ * The "Trusted by" strip (was "Worked with"). Each client has a name (the logo's alt text), an optional logo, and
  * optional details (title, bullet points, photos) that turn it into a pop-up card on the site.
  * Uploads go to R2 straight away so the preview can show them, but nothing is public until the
  * draft is published.

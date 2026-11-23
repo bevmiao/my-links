@@ -182,7 +182,7 @@ export function HomepageEditor({ state, draft, setDraft, onSaved }: Props) {
       </Card>
 
       <Card
-        title="Worked with"
+        title="Trusted by"
         description="Client logos in a row under your links on Home. Names are the logos’ alt text, and clients without a logo show their name instead. Turn the section on in Sections above."
       >
         <ClientEditor clients={draft.clients} errors={errors} onChange={(clients) => patch('clients', clients)} />
